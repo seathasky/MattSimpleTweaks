@@ -1,0 +1,141 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <Frame name="EditModeDeviceManagerFrameOptions" parent="UIParent" hidden="true" movable="true" enableMouse="true" clampedToScreen="true" inherits="BackdropTemplate">
+        <Size x="300" y="170"/>
+        <Anchors>
+            <Anchor point="CENTER"/>
+        </Anchors>
+        <Scripts>
+            <OnLoad>
+                self:SetBackdrop({
+                    bgFile = "Interface/Buttons/WHITE8X8",
+                    edgeFile = "Interface/Buttons/WHITE8X8",
+                    edgeSize = 1,
+                    insets = { left = 1, right = 1, top = 1, bottom = 1 }
+                });
+                self:SetBackdropColor(0.15, 0.15, 0.15, 1);
+                self:SetBackdropBorderColor(0.3, 0.3, 0.3, 1);
+                self:RegisterForDrag("LeftButton");
+            </OnLoad>
+            <OnDragStart>
+                self:StartMoving();
+            </OnDragStart>
+            <OnDragStop>
+                self:StopMovingOrSizing();
+            </OnDragStop>
+            <OnHide>
+                PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF);
+            </OnHide>
+             <OnShow>
+                PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
+            </OnShow>
+        </Scripts>
+        <Layers>
+            <Layer level="ARTWORK">
+                <FontString name="$parentTitle" inherits="GameFontNormal" text="Edit Mode Device Manager" justifyH="CENTER">
+                    <Anchors>
+                        <Anchor point="TOP">
+                            <Offset x="0" y="-5"/>
+                        </Anchor>
+                    </Anchors>
+                    <Color r="0.565" g="0.894" b="0.757"/>
+                </FontString>
+                <FontString name="$parentLabel" inherits="GameFontNormalSmall" text="Select Layout for Login:" justifyH="CENTER">
+                    <Anchors>
+                        <Anchor point="TOP" relativeTo="$parentTitle" relativePoint="BOTTOM">
+                            <Offset x="0" y="-25"/>
+                        </Anchor>
+                    </Anchors>
+                    <Color r="1" g="1" b="1"/>
+                </FontString>
+                <FontString name="$parentStatusText" inherits="GameFontNormalLarge" justifyH="CENTER">
+                    <Size x="280" y="20"/>
+                    <Anchors>
+                        <Anchor point="BOTTOM">
+                            <Offset x="0" y="20"/>
+                        </Anchor>
+                    </Anchors>
+                    <Color r="1" g="1" b="1"/>
+                </FontString>
+            </Layer>
+        </Layers>
+        <Frames>
+            <Button name="$parentCloseButton">
+                <Size x="24" y="24"/>
+                <Anchors>
+                    <Anchor point="TOPRIGHT">
+                        <Offset x="-2" y="-2"/>
+                    </Anchor>
+                </Anchors>
+                <NormalTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Up"/>
+                <PushedTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Down"/>
+                <HighlightTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Highlight" alphaMode="ADD"/>
+                <Scripts>
+                    <OnClick>
+                        self:GetParent():Hide();
+                        -- Show the main panel if it exists
+                        if self:GetParent().mainPanel then
+                            self:GetParent().mainPanel:Show();
+                        end
+                    </OnClick>
+                </Scripts>
+            </Button>
+            <Frame name="EditModeDeviceManagerLayoutDropdown" inherits="UIDropDownMenuTemplate">
+                <Anchors>
+                    <Anchor point="TOP" relativeTo="$parentLabel" relativePoint="BOTTOM">
+                        <Offset x="0" y="-5"/>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnLoad>
+                        local function InitializeDropdown(frame, level)
+                            local layouts = EditModeManagerFrame:GetLayouts()
+                            if not layouts then return end
+                            
+                            local currentSelection = MattSimpleTweaksDB.editMode.presetIndexOnLogin
+                            
+                            for i, l in ipairs(layouts) do
+                                local info = UIDropDownMenu_CreateInfo()
+                                info.text = l.layoutName
+                                info.value = i
+                                info.func = function()
+                                    MattSimpleTweaksDB.editMode.presetIndexOnLogin = i
+                                    EditModeManagerFrame:SelectLayout(i)
+                                    UIDropDownMenu_SetSelectedValue(frame, i)
+                                    UIDropDownMenu_SetText(frame, l.layoutName)
+                                    EditModeDeviceManagerFrameOptionsStatusText:SetText("Current Layout: " .. l.layoutName)
+                                end
+                                info.checked = (currentSelection == i)
+                                UIDropDownMenu_AddButton(info)
+                            end
+
+                            if currentSelection and currentSelection > 0 and layouts[currentSelection] then
+                                UIDropDownMenu_SetSelectedValue(frame, currentSelection)
+                                UIDropDownMenu_SetText(frame, layouts[currentSelection].layoutName)
+                            end
+                        end
+
+                        -- Wait for EditMode addon to load
+                        C_Timer.After(1, function()
+                            if not C_AddOns.IsAddOnLoaded("Blizzard_EditMode") then
+                                C_AddOns.LoadAddOn("Blizzard_EditMode")
+                            end
+                            
+                            -- Wait for EditMode to initialize
+                            C_Timer.After(0.1, function()
+                                if not EditModeManagerFrame or not EditModeManagerFrame.GetLayouts then
+                                    print("Edit Mode not ready yet")
+                                    return
+                                end
+                                
+                                UIDropDownMenu_Initialize(self, InitializeDropdown)
+                                UIDropDownMenu_SetWidth(self, 180)
+                                UIDropDownMenu_JustifyText(self, "LEFT")
+                            end)
+                        end)
+                    </OnLoad>
+                </Scripts>
+            </Frame>
+        </Frames>
+    </Frame>
+</Ui>

@@ -1,0 +1,43 @@
+## Interface: 110200
+## Title: Matt's Simple Tweaks
+## Version: 1.4
+## Author: Matt
+## SavedVariables: MattSimpleTweaksDB
+## OptionalDeps: TaintLess, LibSharedMedia-3.0
+
+## Libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+
+## Main
+MattSimpleTweaksSV.lua
+MattSimpleTweaks.lua
+embeds.xml
+
+## Modules
+Modules\SlashCommands.lua
+Modules\HideHitIndicators.lua
+Modules\ActionBarTweaks.lua
+Modules\ObjectiveFrameScale.lua
+Modules\StatusBarScale.lua
+Modules\PerformanceMonitor.lua
+Modules\HideMicroMenu.lua
+Modules\HideBagBar.lua
+Modules\ActionBarMouseover.lua
+Modules\BagItemLevels.lua
+Modules\ABGrowth.lua
+Modules\EditModeDeviceManager\Core.lua
+Modules\EditModeDeviceManager\UI.xml
+Modules\EditModeDeviceManager\UI.lua
+Modules\NameplateQuestObjectives.lua
+Modules\InterruptAnnouncer.lua
+Modules\Nameplates.lua
+
+## Classes
+Modules\Classes\deathknight.lua
+Modules\Classes\paladin.lua
+
+## Media
+Media\SharedMedia.lua

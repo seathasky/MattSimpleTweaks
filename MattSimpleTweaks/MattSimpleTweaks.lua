@@ -38,6 +38,10 @@ MattSimpleTweaksDB_Defaults = {
     nameplateCastbarScale = 0.8,
     enableAssistedHighlight = false,
     enableNameplateTargetArrows = false,
+    enableVisualSpellQueue = false,
+    enableVisualSpellQueueGCD = true,
+    visualSpellQueueIcons = 3,
+    visualSpellQueueScale = 1.0,
 }
 
 local function InitializeDB()
@@ -102,6 +106,11 @@ local function LoadModules()
     end
     if MattSimpleTweaksDB.enableAssistedHighlight then
         addonTable:SetupAssistedHighlight()
+    end
+    if MattSimpleTweaksDB.enableVisualSpellQueue then
+        if addonTable.ToggleAssistedQueueDisplay then
+            addonTable.ToggleAssistedQueueDisplay(true)
+        end
     end
 end
 
@@ -423,12 +432,13 @@ local function CreateOptionsPanel()
                    dbKey == "enableReloadAlias" or dbKey == "enableEditModeAlias" or
                    dbKey == "enableABGrowth" or dbKey == "enableBagItemLevels" or
                    dbKey == "hideRuneFrame" or dbKey == "hideHolyPowerBar" or
-                   dbKey == "enableInterruptAnnouncer" or  -- Add this line
+                   dbKey == "enableInterruptAnnouncer" or
                    dbKey == "enableNameplateQuestObjectives" or
                    dbKey == "enableHideMacroText" or
                    dbKey == "enableAssistedHighlight" or
                    dbKey == "enableNameplateTargetArrows" or
-                   dbKey == "enableNameplateCastbarScale" then -- Add this line
+                   dbKey == "enableVisualSpellQueue" or
+                   dbKey == "enableNameplateCastbarScale" then
                     print(addonName .. ": Change to '" .. text .. "' requires a UI reload (/rl) to apply.")
                     StaticPopup_Show("MST_RELOAD_CONFIRM")
                 end
@@ -473,13 +483,88 @@ local function CreateOptionsPanel()
     {text = "Hide Bag Bar - Hide the bag slot buttons", key = "enableHideBagBar"},
     })
 
+    -- Assisted Combat Section
+    local assistedHeader = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    assistedHeader:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, -10)
+    assistedHeader:SetText("Assisted Combat (EXPERIMENTAL)")
+    assistedHeader:SetTextColor(1, 0.82, 0, 1)
+    
+    local assistedHighlightCheckbox = CreateCheckbox(contentFrames.actionbars, "Assisted Highlight - Glow effect on next recommended spell", "enableAssistedHighlight", -35)
+    
+    local queueCheckbox, queueDescY = CreateCheckbox(contentFrames.actionbars, "Visual Spell Queue - Display upcoming recommended spells", "enableVisualSpellQueue", -55)
+    
+    local queueDesc = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    queueDesc:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 20, queueDescY - 5)
+    queueDesc:SetWidth(380)
+    queueDesc:SetJustifyH("LEFT")
+    queueDesc:SetText("Similar to Hekili/JustAC - Shows next 3 spells with keybinds using Blizzard's assisted combat system")
+    queueDesc:SetTextColor(0.5, 0.5, 0.5)
+    
+    local gcdCheckbox = CreateCheckbox(contentFrames.actionbars, "Show GCD Wheel - Display GCD cooldown on first spell icon", "enableVisualSpellQueueGCD", queueDescY - 25)
+    
+    -- Icon count dropdown
+    local iconCountLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    iconCountLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 48)
+    iconCountLabel:SetText("Number of Icons:")
+    
+    local iconCountDropdown = CreateFrame("Frame", "MST_IconCountDropdown", contentFrames.actionbars, "UIDropDownMenuTemplate")
+    iconCountDropdown:SetPoint("TOPLEFT", iconCountLabel, "TOPRIGHT", -15, 7)
+    UIDropDownMenu_SetWidth(iconCountDropdown, 80)
+    UIDropDownMenu_SetText(iconCountDropdown, MattSimpleTweaksDB.visualSpellQueueIcons or 3)
+    
+    UIDropDownMenu_Initialize(iconCountDropdown, function(self, level)
+        local info = UIDropDownMenu_CreateInfo()
+        for i = 1, 4 do
+            info.text = tostring(i)
+            info.value = i
+            info.func = function()
+                MattSimpleTweaksDB.visualSpellQueueIcons = i
+                UIDropDownMenu_SetText(iconCountDropdown, i)
+                if addonTable.UpdateAssistedQueueIconCount then
+                    addonTable.UpdateAssistedQueueIconCount(i)
+                end
+            end
+            info.checked = (MattSimpleTweaksDB.visualSpellQueueIcons == i)
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+    
+    -- Scale slider
+    local scaleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    scaleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 73)
+    scaleLabel:SetText("Display Scale:")
+    
+    local scaleSlider = CreateFrame("Slider", "MST_QueueScaleSlider", contentFrames.actionbars, "OptionsSliderTemplate")
+    scaleSlider:SetPoint("TOPLEFT", scaleLabel, "TOPRIGHT", 10, -5)
+    scaleSlider:SetMinMaxValues(0.5, 2.0)
+    scaleSlider:SetValue(MattSimpleTweaksDB.visualSpellQueueScale or 1.0)
+    scaleSlider:SetValueStep(0.05)
+    scaleSlider:SetObeyStepOnDrag(true)
+    scaleSlider:SetWidth(200)
+    _G[scaleSlider:GetName() .. "Low"]:SetText("0.5")
+    _G[scaleSlider:GetName() .. "High"]:SetText("2.0")
+    _G[scaleSlider:GetName() .. "Text"]:SetText(string.format("%.2f", MattSimpleTweaksDB.visualSpellQueueScale or 1.0))
+    
+    scaleSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value * 20 + 0.5) / 20  -- Round to nearest 0.05
+        MattSimpleTweaksDB.visualSpellQueueScale = value
+        _G[self:GetName() .. "Text"]:SetText(string.format("%.2f", value))
+        if addonTable.UpdateAssistedQueueScale then
+            addonTable.UpdateAssistedQueueScale(value)
+        end
+    end)
+    
+    local assistedSeparator = contentFrames.actionbars:CreateTexture(nil, "ARTWORK")
+    assistedSeparator:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 110)
+    assistedSeparator:SetSize(380, 1)
+    assistedSeparator:SetColorTexture(0.3, 0.3, 0.3, 1)
+    
     AddOptions(contentFrames.actionbars, {
         {text = "Better Action Bar Text - Improved hotkey text visibility", key = "enableActionBarTweaks"},
         {text = "Mouseover Fade - Hide action bars 4 & 5 until mouseover", key = "enableActionBarMouseover"},
         {text = "Hide Macro Text - Hide macro text on all action buttons", key = "enableHideMacroText"},
         {text = "Reverse Bar Growth - Action Bar 1 expands upward", key = "enableABGrowth"},
-        {text = "Enhanced Assisted Highlight - Brighter, more visible ability highlights", key = "enableAssistedHighlight"},
-    })
+    }, queueDescY - 120)
 
     -- Create Quest Progress checkbox first, then add description
     local questCheckbox, questDescY = CreateCheckbox(contentFrames.nameplates, "Quest Progress - Display completion numbers on nameplate targets", "enableNameplateQuestObjectives", -10)

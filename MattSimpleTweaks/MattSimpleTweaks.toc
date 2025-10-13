@@ -1,6 +1,6 @@
 ## Interface: 110200
 ## Title: Matt's Simple Tweaks
-## Version: 1.4
+## Version: 1.5
 ## Author: Matt
 ## SavedVariables: MattSimpleTweaksDB
 ## OptionalDeps: TaintLess, LibSharedMedia-3.0

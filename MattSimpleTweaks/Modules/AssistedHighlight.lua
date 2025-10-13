@@ -1,31 +1,35 @@
 local addonName, addonTable = ...
 
--- Hook the assisted combat highlight system
+-- Enhanced assisted combat highlight system
+
 local function EnhanceAssistedHighlights()
-    -- Hook the function that shows/hides the highlight frames
-    local originalSetShown = AssistedCombatManager.SetAssistedHighlightFrameShown
     AssistedCombatManager.SetAssistedHighlightFrameShown = function(self, actionButton, shown)
-        -- Add old-style spell alert glow
         if LibStub and LibStub("LibCustomGlow-1.0", true) then
             local LibCustomGlow = LibStub("LibCustomGlow-1.0")
-            
             if shown then
-                -- Don't call original function - we replace it entirely
-                -- Add the classic spell alert glow (bright yellow pulsing)
-                LibCustomGlow.ButtonGlow_Start(actionButton, {1, 1, 0, 1}, 0.5, 2, 8, 2)
+                LibCustomGlow.ProcGlow_Start(actionButton, {
+                    color = {1, 1, 0, 1},
+                    startAnim = false, -- No animation, just steady
+                    duration = 3600,   -- Long duration, will be stopped manually
+                    frameLevel = 8
+                })
             else
-                -- Stop the glow when hiding
-                LibCustomGlow.ButtonGlow_Stop(actionButton)
+                LibCustomGlow.ProcGlow_Stop(actionButton)
             end
-        else
-            -- Fallback to original if LibCustomGlow isn't available
-            originalSetShown(self, actionButton, shown)
         end
     end
+
+    addonTable.CleanupAssistedHighlightGlows = function() end
 end
 
 function addonTable:SetupAssistedHighlight()
     if MattSimpleTweaksDB and MattSimpleTweaksDB.enableAssistedHighlight then
         EnhanceAssistedHighlights()
+    end
+end
+
+function addonTable:DisableAssistedHighlight()
+    if self.CleanupAssistedHighlightGlows then
+        self.CleanupAssistedHighlightGlows()
     end
 end

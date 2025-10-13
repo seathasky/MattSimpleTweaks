@@ -1,3 +1,20 @@
+--[[
+Slash command for glow style:
+  /mstglow star   - Use animated star glow (default)
+  /mstglow pixel  - Use pixel border flash glow
+]]
+SLASH_MSTGLOW1 = "/mstglow"
+SlashCmdList["MSTGLOW"] = function(msg)
+    local arg = msg and msg:lower():match("%S+")
+    if arg == "star" or arg == "pixel" then
+        if MattSimpleTweaks and MattSimpleTweaks.UpdateAssistedQueueGlowStyle then
+            MattSimpleTweaks.UpdateAssistedQueueGlowStyle(arg)
+            print("|cff00ff98[MST]|r Glow style set to: "..arg)
+        end
+    else
+        print("|cff00ff98[MST]|r Usage: /mstglow star  or  /mstglow pixel")
+    end
+end
 -- Assisted Queue Display (1-3 icons with keybinds and cooldowns)
 local addonName, addonTable = ...
 
@@ -62,6 +79,7 @@ titleBorder:SetColorTexture(0.5, 0.5, 0.5, 0.8)
 
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
+titleText:SetFont(STANDARD_TEXT_FONT, 14, "OUTLINE")
 titleText:SetText("MST Visual Spell Queue")
 titleText:SetTextColor(1, 0.82, 0, 1)
 
@@ -79,63 +97,98 @@ titleBar:SetScript("OnLeave", function(self)
     titleBar:Hide()
 end)
 
--- Create icon buttons
+-- LibCustomGlow integration
+local LibCustomGlow = LibStub and LibStub("LibCustomGlow-1.0", true)
+
 local buttons = {}
 for i = 1, MAX_ICONS do
     local isFirst = (i == 1)
     local size = isFirst and firstIconSize or ICON_SIZE
     local xPos = (i == 1) and 0 or (firstIconSize + (i - 2) * (ICON_SIZE + ICON_SPACING) + ICON_SPACING)
-    
+
     local btn = CreateFrame("Button", nil, frame)
     btn:SetSize(size, size)
     btn:SetPoint("LEFT", frame, "LEFT", xPos, 0)
-    btn:EnableMouse(false)  -- Make buttons non-interactive so clicks pass through to frame
-    
+    btn:EnableMouse(false)
+
     -- Icon texture
     btn.icon = btn:CreateTexture(nil, "ARTWORK")
     btn.icon:SetAllPoints(btn)
     btn.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    
+
     -- Cooldown frame
     btn.cooldown = CreateFrame("Cooldown", nil, btn, "CooldownFrameTemplate")
     btn.cooldown:SetAllPoints(btn)
     btn.cooldown:SetDrawEdge(true)
     btn.cooldown:SetDrawSwipe(true)
     btn.cooldown:SetHideCountdownNumbers(false)
-    
+
     -- Keybind text
     btn.keybind = btn:CreateFontString(nil, "OVERLAY")
-    local fontSize = isFirst and 16 or 12
+    local fontSize = isFirst and 36 or 28
     btn.keybind:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
     btn.keybind:SetTextColor(1, 1, 1, 1)
     btn.keybind:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -2, -2)
-    
-    -- Glow for first icon only
-    if isFirst then
-        btn.focusFrame = btn:CreateTexture(nil, "OVERLAY")
-        btn.focusFrame:SetPoint("CENTER", 0, 0)
-        btn.focusFrame:SetSize(size + 14, size + 14)
-        btn.focusFrame:SetTexture("Interface\\ExtraActionButton\\ExtraActionButton-Border")
-        btn.focusFrame:SetVertexColor(1, 0.82, 0, 1)
-        
-        btn.focusGlow = btn:CreateTexture(nil, "OVERLAY", nil, 1)
-        btn.focusGlow:SetPoint("CENTER", 0, 0)
-        btn.focusGlow:SetSize(size + 24, size + 24)
-        btn.focusGlow:SetTexture("Interface\\Cooldown\\star4")
-        btn.focusGlow:SetBlendMode("ADD")
-        btn.focusGlow:SetVertexColor(1, 0.9, 0.5, 0.75)
-        
-        local animGroup = btn.focusGlow:CreateAnimationGroup()
-        local rotation = animGroup:CreateAnimation("Rotation")
-        rotation:SetDegrees(-360)
-        rotation:SetDuration(10)
-        rotation:SetOrigin("CENTER", 0, 0)
-        animGroup:SetLooping("REPEAT")
-        
-        btn.focusGlow:SetScript("OnShow", function(self) animGroup:Play() end)
-        btn.focusGlow:SetScript("OnHide", function(self) animGroup:Stop() end)
+
+        if isFirst then
+            -- Star (animated) setup
+            btn.focusGlow = btn:CreateTexture(nil, "OVERLAY", nil, 1)
+            btn.focusGlow:SetPoint("CENTER", 0, 0)
+            btn.focusGlow:SetSize(size + 24, size + 24)
+            btn.focusGlow:SetTexture("Interface\\Cooldown\\star4")
+            btn.focusGlow:SetBlendMode("ADD")
+            btn.focusGlow:SetVertexColor(1, 0.9, 0.5, 0.75)
+            btn.focusGlow:Hide()
+            local animGroup = btn.focusGlow:CreateAnimationGroup()
+            local rotation = animGroup:CreateAnimation("Rotation")
+            rotation:SetDegrees(-360)
+            rotation:SetDuration(10)
+            rotation:SetOrigin("CENTER", 0, 0)
+            animGroup:SetLooping("REPEAT")
+            btn.focusGlow:SetScript("OnShow", function(self) animGroup:Play() end)
+            btn.focusGlow:SetScript("OnHide", function(self) animGroup:Stop() end)
+
+            btn.libGlowActive = false
+            btn.ShowLibGlow = function(self)
+                local style = (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueGlowStyle) or "star"
+                if style == "star" then
+                    -- Turn off pixel glow
+                    if LibCustomGlow and self.libGlowActive then
+                        LibCustomGlow.PixelGlow_Stop(self)
+                        self.libGlowActive = false
+                    end
+                    -- Turn on star glow
+                    self.focusGlow:Show()
+                elseif style == "pixel" then
+                    -- Turn off star glow
+                    self.focusGlow:Hide()
+                    -- Turn on pixel glow
+                    if LibCustomGlow and not self.libGlowActive then
+                        LibCustomGlow.PixelGlow_Start(self, {1, 0.82, 0, 1}, 8, 0.25, nil, 4, 2, 2, "flash", 1)
+                        self.libGlowActive = true
+                    end
+                end
+            end
+            btn.HideLibGlow = function(self)
+                self.focusGlow:Hide()
+                if LibCustomGlow and self.libGlowActive then
+                    LibCustomGlow.PixelGlow_Stop(self)
+                    self.libGlowActive = false
+                end
+            end
+        end
+-- Function to update the glow style at runtime
+function addonTable.UpdateAssistedQueueGlowStyle(style)
+    if not MattSimpleTweaksDB then return end
+    if style ~= "star" and style ~= "pixel" then return end
+    MattSimpleTweaksDB.visualSpellQueueGlowStyle = style
+    -- Force update display to apply new style
+    if buttons[1] and buttons[1].ShowLibGlow then
+        buttons[1]:HideLibGlow()
+        buttons[1]:ShowLibGlow()
     end
-    
+end
+
     btn:Hide()
     buttons[i] = btn
 end
@@ -159,14 +212,12 @@ end
 local function GetSpellQueue()
     local queue = {}
     local seen = {}
-    
     -- Get primary spell
     local primarySpellID = C_AssistedCombat and C_AssistedCombat.GetNextCastSpell and C_AssistedCombat.GetNextCastSpell()
     if primarySpellID and primarySpellID > 0 then
         queue[#queue + 1] = primarySpellID
         seen[primarySpellID] = true
     end
-    
     -- Get rotation spells (only if we need more than 1 icon)
     if activeIconCount > 1 then
         local rotationList = C_AssistedCombat and C_AssistedCombat.GetRotationSpells and C_AssistedCombat.GetRotationSpells()
@@ -185,7 +236,40 @@ local function GetSpellQueue()
             end
         end
     end
-    
+    -- Paladin: Only show one of Wake of Ashes (255937) or Hammer of Light (427453), prefer Hammer if available
+    local isPaladin = select(2, UnitClass("player")) == "PALADIN"
+    if isPaladin then
+        local idxWake, idxHammer
+        for i, spellID in ipairs(queue) do
+            if spellID == 255937 then idxWake = i end
+            if spellID == 427453 then idxHammer = i end
+        end
+        if idxWake and idxHammer then
+            -- Prefer Hammer of Light if both are present
+            table.remove(queue, idxWake)
+        elseif idxWake or idxHammer then
+            -- If only one is present, check if it's actually available (not on cooldown)
+            local function isOnCooldown(spellID)
+                local cd = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
+                if cd and cd.startTime and cd.duration then
+                    return cd.duration > 1.5 and (cd.startTime + cd.duration - GetTime()) > 0.1
+                end
+                return false
+            end
+            if idxHammer and isOnCooldown(427453) and not idxWake then
+                -- Hammer is on cooldown, but Wake is not in queue, so try to show Wake if available
+                if not isOnCooldown(255937) then
+                    -- Insert Wake at Hammer's position
+                    queue[idxHammer] = 255937
+                end
+            elseif idxWake and isOnCooldown(255937) and not idxHammer then
+                -- Wake is on cooldown, but Hammer is not in queue, so try to show Hammer if available
+                if not isOnCooldown(427453) then
+                    queue[idxWake] = 427453
+                end
+            end
+        end
+    end
     return queue
 end
 
@@ -285,8 +369,7 @@ local function UpdateDisplay(force)
             -- Only show buttons within active icon count
             if i > activeIconCount then
                 btn:Hide()
-                if btn.focusFrame then btn.focusFrame:Hide() end
-                if btn.focusGlow then btn.focusGlow:Hide() end
+                if i == 1 and btn.HideLibGlow then btn:HideLibGlow() end
             elseif spellID then
                 local info = GetCachedSpellInfo(spellID)
                 if info and info.iconID then
@@ -311,8 +394,7 @@ local function UpdateDisplay(force)
                                 btn.cooldown:Hide()
                             end
                         end
-                        if btn.focusFrame then btn.focusFrame:Show() end
-                        if btn.focusGlow then btn.focusGlow:Show() end
+                        if i == 1 and btn.ShowLibGlow then btn:ShowLibGlow() end
                     else
                         local cdInfo = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
                         if cdInfo and cdInfo.startTime and cdInfo.duration and cdInfo.duration > 1.5 then
@@ -321,10 +403,7 @@ local function UpdateDisplay(force)
                         else
                             btn.cooldown:Hide()
                         end
-                        if i == 1 then
-                            if btn.focusFrame then btn.focusFrame:Show() end
-                            if btn.focusGlow then btn.focusGlow:Show() end
-                        end
+                        if i == 1 and btn.ShowLibGlow then btn:ShowLibGlow() end
                     end
                     
                     btn:Show()
@@ -332,8 +411,7 @@ local function UpdateDisplay(force)
                 end
             else
                 btn:Hide()
-                if btn.focusFrame then btn.focusFrame:Hide() end
-                if btn.focusGlow then btn.focusGlow:Hide() end
+                if i == 1 and btn.HideLibGlow then btn:HideLibGlow() end
             end
         end
         
@@ -387,9 +465,12 @@ addonTable.AssistedQueueDisplayEnabled = false
 function addonTable.ToggleAssistedQueueDisplay(enable)
     addonTable.AssistedQueueDisplayEnabled = enable
     if enable then
-        -- Set icon count and scale from saved variables
+        -- Set icon count, scale, and glow style from saved variables
         activeIconCount = (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueIcons) or 3
         local scale = (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueScale) or 1.0
+        if MattSimpleTweaksDB and not MattSimpleTweaksDB.visualSpellQueueGlowStyle then
+            MattSimpleTweaksDB.visualSpellQueueGlowStyle = "star" -- default
+        end
         frame:SetScale(scale)
         frame:SetSize(CalculateTotalWidth(activeIconCount), firstIconSize)
         UpdateDisplay(true)

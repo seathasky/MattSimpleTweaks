@@ -6,11 +6,11 @@ addonTable.modules = {
     deathknight = {},
     paladin = {},
     nameplates = {
-        SetupNameplateCastbarScale = function() end  -- Add this stub
+        SetupNameplateCastbarScale = function() end
     },
     interruptAnnouncer = {
-        EnableInterruptAnnouncer = function() end,  -- Stub function that will be replaced
-        DisableInterruptAnnouncer = function() end  -- Stub function that will be replaced
+        EnableInterruptAnnouncer = function() end,
+        DisableInterruptAnnouncer = function() end
     }
 }
 
@@ -137,17 +137,16 @@ local function CreateOptionsPanel()
     optionsFrame:SetScript("OnDragStart", optionsFrame.StartMoving)
     optionsFrame:SetScript("OnDragStop", optionsFrame.StopMovingOrSizing)
 
-    -- Modern dark background
     optionsFrame:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
         edgeSize = 1,
         insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
-    optionsFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95) -- Dark gray, slightly transparent
-    optionsFrame:SetBackdropBorderColor(0.3, 0.3, 0.3, 1) -- Light gray border
+    optionsFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
+    optionsFrame:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
-    -- Modern header
+    -- Header
     local header = CreateFrame("Frame", nil, optionsFrame, "BackdropTemplate")
     header:SetPoint("TOPLEFT")
     header:SetPoint("TOPRIGHT")
@@ -157,14 +156,13 @@ local function CreateOptionsPanel()
         edgeFile = "Interface\\Buttons\\WHITE8X8",
         edgeSize = 1,
     })
-    header:SetBackdropColor(0.15, 0.15, 0.15, 1) -- Slightly lighter than main background
+    header:SetBackdropColor(0.15, 0.15, 0.15, 1)
     header:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
-    -- Title text
     local title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("CENTER", header, "CENTER")
     title:SetText("MATT'S SIMPLE TWEAKS")
-    title:SetTextColor(0.565, 0.894, 0.757) -- Light teal (#90E4C1)
+    title:SetTextColor(0.565, 0.894, 0.757)
 
     -- Close button
     local closeButton = CreateFrame("Button", nil, header)
@@ -175,13 +173,13 @@ local function CreateOptionsPanel()
     closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
     closeButton:SetScript("OnClick", function() optionsFrame:Hide() end)
 
-    -- Create tab container - Replace the existing tab container creation with this
+    -- Tab container
     local tabContainer = CreateFrame("Frame", nil, optionsFrame, "BackdropTemplate")
     tabContainer:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 5, -5)
     tabContainer:SetPoint("BOTTOMLEFT", optionsFrame, "BOTTOMLEFT", 5, 5)
-    tabContainer:SetWidth(120) -- Width of vertical tabs
+    tabContainer:SetWidth(120)
 
-    -- Create content container - Update the positioning
+    -- Content container
     local contentContainer = CreateFrame("Frame", nil, optionsFrame, "BackdropTemplate")
     contentContainer:SetPoint("TOPLEFT", tabContainer, "TOPRIGHT", 5, 0)
     contentContainer:SetPoint("BOTTOMRIGHT", optionsFrame, "BOTTOMRIGHT", -5, 5)
@@ -193,17 +191,16 @@ local function CreateOptionsPanel()
     contentContainer:SetBackdropColor(0.15, 0.15, 0.15, 1)
     contentContainer:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
-    -- Create ScrollFrame - ADD THIS SECTION
+    -- Scroll frame
     local scrollFrame = CreateFrame("ScrollFrame", nil, contentContainer)
     scrollFrame:SetPoint("TOPLEFT", 10, -10)
     scrollFrame:SetPoint("BOTTOMRIGHT", -26, 10)
 
-    -- Create the scrolling content frame
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
     scrollFrame:SetScrollChild(scrollChild)
-    scrollChild:SetSize(scrollFrame:GetWidth(), 1000) -- Set initial height
+    scrollChild:SetSize(scrollFrame:GetWidth(), 1000)
 
-    -- Create content frames for each category
+    -- Content frames
     local contentFrames = {
         general = CreateFrame("Frame", nil, scrollChild),
         ui = CreateFrame("Frame", nil, scrollChild),
@@ -218,11 +215,11 @@ local function CreateOptionsPanel()
     for _, frame in pairs(contentFrames) do
         frame:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
         frame:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, 0)
-        frame:SetHeight(1000) -- Set a fixed initial height
+        frame:SetHeight(1000)
         frame:Hide()
     end
 
-    -- Create the slider (scrollbar)
+    -- Scrollbar
     local slider = CreateFrame("Slider", nil, scrollFrame, "UIPanelScrollBarTemplate")
     slider:SetPoint("TOPRIGHT", contentContainer, -8, -20)
     slider:SetPoint("BOTTOMRIGHT", contentContainer, -8, 20)
@@ -238,7 +235,7 @@ local function CreateOptionsPanel()
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
         local current = slider:GetValue()
         local min, max = slider:GetMinMaxValues()
-        local step = 30 -- Adjust scroll speed
+        local step = 30
 
         if delta > 0 then
             slider:SetValue(math.max(min, current - step))
@@ -298,13 +295,11 @@ local function CreateOptionsPanel()
 
         tab.contentFrame = contentFrames[tabFrameMap[text]]
 
-        -- Create and store the text fontstring
         local tabText = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         tabText:SetPoint("CENTER")
         tabText:SetText(text:upper())
-        tab.text = tabText -- Store reference to fontstring
+        tab.text = tabText
 
-        -- Use teal color (matching title) for selected tab
         local isSelected = id == 1
         tab:SetBackdropColor(0.15, 0.15, 0.15, isSelected and 1 or 0.5)
         tab:SetBackdropBorderColor(isSelected and 0.565 or 0.3, isSelected and 0.894 or 0.3, isSelected and 0.757 or 0.3, 1)
@@ -315,12 +310,12 @@ local function CreateOptionsPanel()
                 t.contentFrame:Hide()
                 t:SetBackdropColor(0.15, 0.15, 0.15, 0.5)
                 t:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
-                t.text:SetTextColor(0.7, 0.7, 0.7) -- Use stored reference
+                t.text:SetTextColor(0.7, 0.7, 0.7)
             end
             tab.contentFrame:Show()
             tab:SetBackdropColor(0.15, 0.15, 0.15, 1)
             tab:SetBackdropBorderColor(0.565, 0.894, 0.757, 1)
-            tab.text:SetTextColor(0.565, 0.894, 0.757) -- Use stored reference
+            tab.text:SetTextColor(0.565, 0.894, 0.757)
             slider:SetValue(0)
             UpdateScrollRange()
         end)
@@ -328,7 +323,7 @@ local function CreateOptionsPanel()
         tab:SetScript("OnEnter", function()
             if tab.contentFrame:IsShown() then return end
             tab:SetBackdropColor(0.15, 0.15, 0.15, 0.8)
-            tab:SetBackdropBorderColor(0.565, 0.894, 0.757, 0.5) -- Dimmed teal border on hover
+            tab:SetBackdropBorderColor(0.565, 0.894, 0.757, 0.5)
         end)
 
         tab:SetScript("OnLeave", function()
@@ -350,7 +345,6 @@ local function CreateOptionsPanel()
     CreateTab(6, "Classes")
     CreateTab(7, "System")
 
-    -- Show first tab by default
     tabs[1]:Click()
 
     -- Helper functions
@@ -359,21 +353,18 @@ local function CreateOptionsPanel()
         cb:SetSize(20, 20)
         cb:SetPoint("TOPLEFT", 20, y)
         
-        -- Modern checkbox textures
         cb:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
         cb:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
         cb:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
         cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
         
-        -- Create primary label
-        local mainText = text:match("^([^%-]+)") -- Get text before the dash
+        local mainText = text:match("^([^%-]+)")
         local labelText = cb:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         labelText:SetPoint("LEFT", cb, "RIGHT", 5, 0)
         labelText:SetText(mainText)
         labelText:SetTextColor(1, 1, 1)
 
-        -- Create description text (after the dash)
-        local description = text:match("%-(.+)$") -- Get text after the dash
+        local description = text:match("%-(.+)$")
         if description then
             local descText = cb:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
             descText:SetPoint("LEFT", labelText, "RIGHT", 5, 0)
@@ -386,7 +377,6 @@ local function CreateOptionsPanel()
 
         cb:SetChecked(MattSimpleTweaksDB[dbKey])
         
-        -- Handle initial state for performance monitor
         if dbKey == "enablePerformanceMonitor" and not MattSimpleTweaksDB[dbKey] then
             if _G.MattPerfMonitor then
                 _G.MattPerfMonitor:Hide()
@@ -399,21 +389,19 @@ local function CreateOptionsPanel()
             local isChecked = self:GetChecked()
             MattSimpleTweaksDB[dbKey] = isChecked
 
-            -- Special handling for performance monitor
             if dbKey == "enablePerformanceMonitor" then
                 if isChecked then
                     addonTable:SetupPerformanceMonitor()
                 else
                     addonTable:DisablePerformanceMonitor()
                 end
-                return -- Skip reload check for performance monitor
+                return
             end
 
             if callback then callback(isChecked) end
 
-            -- Special handling for Nameplate Quest Objectives: Hide icons immediately if unchecked
             if dbKey == "enableNameplateQuestObjectives" and not isChecked then
-                if C_NamePlate then -- Ensure C_NamePlate is available
+                if C_NamePlate then
                     for _, namePlate in pairs(C_NamePlate.GetNamePlates()) do
                         if namePlate and namePlate.UnitFrame and namePlate.UnitFrame.questIcon then
                             namePlate.UnitFrame.questIcon:Hide()
@@ -422,7 +410,6 @@ local function CreateOptionsPanel()
                 end
             end
 
-            -- Check if reload is needed
             if wasChecked ~= isChecked then
                 if dbKey == "enableHideMicroMenu" or dbKey == "enableHideBagBar" or
                    dbKey == "hideHitIndicators" or dbKey == "enableObjectiveFrameScale" or
@@ -445,7 +432,7 @@ local function CreateOptionsPanel()
             end
         end)
 
-        return cb, y - 25 -- Return the checkbox and new yOffset
+        return cb, y - 25
     end
 
     local function CreateSectionHeader(parent, text, color, y)
@@ -455,7 +442,7 @@ local function CreateOptionsPanel()
         if color then
             header:SetTextColor(unpack(color))
         end
-        return header, y - 30 -- Return header and new y position
+        return header, y - 30
     end
 
     local function AddOptions(frame, options, startY)
@@ -476,11 +463,11 @@ local function CreateOptionsPanel()
     })
 
     AddOptions(contentFrames.ui, {
-    {text = "Hide Combat Text - Remove floating combat text on player/pet frame", key = "hideHitIndicators"},
-    {text = "Scale Objective Frame - Reduce objective tracker to |cffffd100(0.7)|r scale", key = "enableObjectiveFrameScale"},
-    {text = "Scale Status Bar - Reduce experience/reputation bar to |cffffd100(0.7)|r scale", key = "enableStatusBarScale"},
-    {text = "Hide Micro Menu - Hide the game menu buttons", key = "enableHideMicroMenu"},
-    {text = "Hide Bag Bar - Hide the bag slot buttons", key = "enableHideBagBar"},
+        {text = "Hide Combat Text - Remove floating combat text on player/pet frame", key = "hideHitIndicators"},
+        {text = "Scale Objective Frame - Reduce objective tracker to |cffffd100(0.7)|r scale", key = "enableObjectiveFrameScale"},
+        {text = "Scale Status Bar - Reduce experience/reputation bar to |cffffd100(0.7)|r scale", key = "enableStatusBarScale"},
+        {text = "Hide Micro Menu - Hide the game menu buttons", key = "enableHideMicroMenu"},
+        {text = "Hide Bag Bar - Hide the bag slot buttons", key = "enableHideBagBar"},
     })
 
     -- Assisted Combat Section
@@ -489,29 +476,24 @@ local function CreateOptionsPanel()
     assistedHeader:SetText("Assisted Combat (EXPERIMENTAL)")
     assistedHeader:SetTextColor(1, 0.82, 0, 1)
     
-    local assistedHighlightCheckbox = CreateCheckbox(contentFrames.actionbars, "Assisted Highlight - Glow effect on next recommended spell", "enableAssistedHighlight", -35)
-    
-    local queueCheckbox, queueDescY = CreateCheckbox(contentFrames.actionbars, "Visual Spell Queue - Display upcoming recommended spells", "enableVisualSpellQueue", -55)
-    
-    local queueDesc = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    queueDesc:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 20, queueDescY - 5)
-    queueDesc:SetWidth(380)
-    queueDesc:SetJustifyH("LEFT")
-    queueDesc:SetText("Similar to Hekili/JustAC - Shows next 3 spells with keybinds using Blizzard's assisted combat system")
-    queueDesc:SetTextColor(0.5, 0.5, 0.5)
-    
-    local gcdCheckbox = CreateCheckbox(contentFrames.actionbars, "Show GCD Wheel - Display GCD cooldown on first spell icon", "enableVisualSpellQueueGCD", queueDescY - 25)
-    
-    -- Icon count dropdown
+    local y = -35
+    local assistedHighlightCheckbox; assistedHighlightCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Assisted Highlight - Glow effect on next recommended spell", "enableAssistedHighlight", y)
+    local queueCheckbox; queueCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Visual Spell Queue - Display upcoming recommended spells", "enableVisualSpellQueue", y)
+    local gcdCheckbox; gcdCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Show GCD Wheel - Display GCD cooldown on first spell icon", "enableVisualSpellQueueGCD", y)
+
+    -- Icon count dropdown (with proper spacing)
+
+    -- Icon count dropdown (stacked)
     local iconCountLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    iconCountLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 48)
+    iconCountLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
     iconCountLabel:SetText("Number of Icons:")
-    
+    y = y - 35
+
     local iconCountDropdown = CreateFrame("Frame", "MST_IconCountDropdown", contentFrames.actionbars, "UIDropDownMenuTemplate")
     iconCountDropdown:SetPoint("TOPLEFT", iconCountLabel, "TOPRIGHT", -15, 7)
     UIDropDownMenu_SetWidth(iconCountDropdown, 80)
     UIDropDownMenu_SetText(iconCountDropdown, MattSimpleTweaksDB.visualSpellQueueIcons or 3)
-    
+
     UIDropDownMenu_Initialize(iconCountDropdown, function(self, level)
         local info = UIDropDownMenu_CreateInfo()
         for i = 1, 4 do
@@ -528,12 +510,58 @@ local function CreateOptionsPanel()
             UIDropDownMenu_AddButton(info)
         end
     end)
-    
-    -- Scale slider
+
+    -- Glow style dropdown (stacked)
+    local glowStyleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    glowStyleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
+    glowStyleLabel:SetText("Glow Style:")
+    y = y - 35
+
+    local glowStyleDropdown = CreateFrame("Frame", "MST_GlowStyleDropdown", contentFrames.actionbars, "UIDropDownMenuTemplate")
+    glowStyleDropdown:SetPoint("TOPLEFT", glowStyleLabel, "TOPRIGHT", -15, 7)
+    UIDropDownMenu_SetWidth(glowStyleDropdown, 120)
+    local function getCurrentGlowStyle()
+        return (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueGlowStyle) or "star"
+    end
+    local function setGlowStyle(style)
+        local currentStyle = getCurrentGlowStyle()
+        if currentStyle ~= style then
+            MattSimpleTweaksDB.visualSpellQueueGlowStyle = style
+            UIDropDownMenu_SetText(glowStyleDropdown, style == "star" and "Star" or "Pixel Flash")
+            if addonTable.UpdateAssistedQueueGlowStyle then
+                addonTable.UpdateAssistedQueueGlowStyle(style)
+            end
+            print(addonName .. ": Glow style changed. Reload UI (/rl) for changes to fully apply.")
+            StaticPopup_Show("MST_RELOAD_CONFIRM")
+        end
+    end
+    UIDropDownMenu_SetText(glowStyleDropdown, getCurrentGlowStyle() == "star" and "Star" or "Pixel Flash")
+    UIDropDownMenu_Initialize(glowStyleDropdown, function(self, level)
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = "Star"
+        info.value = "star"
+        info.func = function()
+            setGlowStyle("star")
+        end
+        info.checked = (getCurrentGlowStyle() == "star")
+        UIDropDownMenu_AddButton(info)
+
+        info = UIDropDownMenu_CreateInfo()
+        info.text = "Pixel Flash"
+        info.value = "pixel"
+        info.func = function()
+            setGlowStyle("pixel")
+        end
+        info.checked = (getCurrentGlowStyle() == "pixel")
+        UIDropDownMenu_AddButton(info)
+    end)
+
+    -- Scale slider (stacked)
     local scaleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    scaleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 73)
+    scaleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
     scaleLabel:SetText("Display Scale:")
-    
+    y = y - 35
+
     local scaleSlider = CreateFrame("Slider", "MST_QueueScaleSlider", contentFrames.actionbars, "OptionsSliderTemplate")
     scaleSlider:SetPoint("TOPLEFT", scaleLabel, "TOPRIGHT", 10, -5)
     scaleSlider:SetMinMaxValues(0.5, 2.0)
@@ -544,40 +572,40 @@ local function CreateOptionsPanel()
     _G[scaleSlider:GetName() .. "Low"]:SetText("0.5")
     _G[scaleSlider:GetName() .. "High"]:SetText("2.0")
     _G[scaleSlider:GetName() .. "Text"]:SetText(string.format("%.2f", MattSimpleTweaksDB.visualSpellQueueScale or 1.0))
-    
+
     scaleSlider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value * 20 + 0.5) / 20  -- Round to nearest 0.05
+        value = math.floor(value * 20 + 0.5) / 20
         MattSimpleTweaksDB.visualSpellQueueScale = value
         _G[self:GetName() .. "Text"]:SetText(string.format("%.2f", value))
         if addonTable.UpdateAssistedQueueScale then
             addonTable.UpdateAssistedQueueScale(value)
         end
     end)
-    
+
+    -- Separator line after Assisted Combat section (stacked)
     local assistedSeparator = contentFrames.actionbars:CreateTexture(nil, "ARTWORK")
-    assistedSeparator:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, queueDescY - 110)
-    assistedSeparator:SetSize(380, 1)
+    assistedSeparator:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
+    assistedSeparator:SetSize(520, 1)
     assistedSeparator:SetColorTexture(0.3, 0.3, 0.3, 1)
-    
+    y = y - 20
+
     AddOptions(contentFrames.actionbars, {
         {text = "Better Action Bar Text - Improved hotkey text visibility", key = "enableActionBarTweaks"},
         {text = "Mouseover Fade - Hide action bars 4 & 5 until mouseover", key = "enableActionBarMouseover"},
         {text = "Hide Macro Text - Hide macro text on all action buttons", key = "enableHideMacroText"},
         {text = "Reverse Bar Growth - Action Bar 1 expands upward", key = "enableABGrowth"},
-    }, queueDescY - 120)
+    }, y)
 
-    -- Create Quest Progress checkbox first, then add description
+    -- Nameplates
     local questCheckbox, questDescY = CreateCheckbox(contentFrames.nameplates, "Quest Progress - Display completion numbers on nameplate targets", "enableNameplateQuestObjectives", -10)
-
-    -- Add description for quest progress option
+    
     local questDesc = contentFrames.nameplates:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
     questDesc:SetPoint("TOPLEFT", contentFrames.nameplates, "TOPLEFT", 20, questDescY - 5)
     questDesc:SetWidth(380)
     questDesc:SetJustifyH("LEFT")
     questDesc:SetText("Requires UI refresh when changing between larger/smaller nameplates in WoW settings")
-    questDesc:SetTextColor(0.5, 0.5, 0.5)  -- Gray color
+    questDesc:SetTextColor(0.5, 0.5, 0.5)
 
-    -- Add remaining nameplate options
     AddOptions(contentFrames.nameplates, {
         {text = "THICC Enemy Castbars - Increase enemy castbar size to |cffffd100(16px)|r height", key = "enableNameplateCastbarScale"},
         {text = "Target Arrows - Show > < on targeted nameplates", key = "enableNameplateTargetArrows"},
@@ -587,8 +615,7 @@ local function CreateOptionsPanel()
         {text = "Show Item Levels - Display gear iLvl |cffff0000(Combined Backpack Only)|r", key = "enableBagItemLevels"},
     })
 
-    -- System tab content (formerly Edit Mode)
-    -- Description text first
+    -- System (Edit Mode Device Manager)
     local edmDesc = contentFrames.editmode:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
     edmDesc:SetPoint("TOP", contentFrames.editmode, "TOP", 0, -10)
     edmDesc:SetWidth(400)
@@ -596,46 +623,25 @@ local function CreateOptionsPanel()
     edmDesc:SetText("Edit Mode Device Manager automatically sets your preferred Edit Mode WoW layout for each device you play on")
     edmDesc:SetTextColor(1, 1, 1)
 
-    -- Button below description
     local edmButton = CreateFrame("Button", nil, contentFrames.editmode, "UIPanelButtonTemplate")
     edmButton:SetSize(200, 25)
     edmButton:SetPoint("TOP", edmDesc, "BOTTOM", 0, -10)
     edmButton:GetFontString():SetTextColor(1, 1, 1)
     edmButton:SetText("Edit Mode Device Manager")
-    
-    -- Set button textures to teal
     edmButton.Left:SetVertexColor(0.565, 0.894, 0.757)
     edmButton.Middle:SetVertexColor(0.565, 0.894, 0.757)
     edmButton.Right:SetVertexColor(0.565, 0.894, 0.757)
-    
     edmButton:SetScript("OnClick", function()
         if EditModeDeviceManagerFrameOptions then
-            optionsFrame:Hide() -- Hide the main options panel
+            optionsFrame:Hide()
             EditModeDeviceManagerFrameOptions:Show()
-            -- Store reference to main options panel
             EditModeDeviceManagerFrameOptions.mainPanel = optionsFrame
         else
             print(addonName .. ": Edit Mode Device Manager is not loaded.")
         end
     end)
 
-    -- Set button textures to teal
-    edmButton.Left:SetVertexColor(0.565, 0.894, 0.757)
-    edmButton.Middle:SetVertexColor(0.565, 0.894, 0.757)
-    edmButton.Right:SetVertexColor(0.565, 0.894, 0.757)
-    
-    edmButton:SetScript("OnClick", function()
-        if EditModeDeviceManagerFrameOptions then
-            optionsFrame:Hide() -- Hide the main options panel
-            EditModeDeviceManagerFrameOptions:Show()
-            -- Store reference to main options panel
-            EditModeDeviceManagerFrameOptions.mainPanel = optionsFrame
-        else
-            print(addonName .. ": Edit Mode Device Manager is not loaded.")
-        end
-    end)
-
-    -- Add options to Classes frame
+    -- Classes
     local classY = -10
     local CLASS_COLORS = {
         ["DEATHKNIGHT"] = {0.77, 0.12, 0.23},
@@ -657,22 +663,19 @@ local function CreateOptionsPanel()
         local text = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
         text:SetPoint("TOPLEFT", 40, y)
         text:SetText("None")
-        text:SetTextColor(0.5, 0.5, 0.5) -- Gray color
+        text:SetTextColor(0.5, 0.5, 0.5)
         return text, y - 25
     end
 
-    -- Create all class headers first
     local _, newY = CreateSectionHeader(contentFrames.classes, "Deathknight", CLASS_COLORS["DEATHKNIGHT"], classY)
     AddOptions(contentFrames.classes, {
         {text = "Hide Rune Frame", key = "hideRuneFrame"},
     }, newY)
 
-    -- Add remaining class headers with spacing
     local function CreateClassHeader(class, y)
         local displayText = class:sub(1,1) .. class:sub(2):lower()
         local _, newY = CreateSectionHeader(contentFrames.classes, displayText, CLASS_COLORS[class], y)
         
-        -- Special handling for Paladin to add options
         if class == "PALADIN" then
             local yPos = AddOptions(contentFrames.classes, {
                 {text = "Hide Holy Power Bar", key = "hideHolyPowerBar"},
@@ -684,8 +687,7 @@ local function CreateOptionsPanel()
         return _, yPos
     end
 
-    -- Add remaining classes
-    local currentY = newY - 30 -- Start after Death Knight section
+    local currentY = newY - 30
     _, currentY = CreateClassHeader("DEMONHUNTER", currentY)
     _, currentY = CreateClassHeader("DRUID", currentY - 10)
     _, currentY = CreateClassHeader("EVOKER", currentY - 10)

@@ -7,21 +7,38 @@ local function ScaleActionBars()
     local macroScale = 1.3
     for i=1,12 do
         local elements = {
+            -- Main Action Bar (Bar 1)
             _G["ActionButton" .. i .. "Count"],
             _G["ActionButton" .. i .. "HotKey"],
             _G["ActionButton" .. i .. "Name"],
+            -- Bottom Left Bar (Bar 2)
             _G["MultiBarBottomLeftButton" .. i .. "Count"],
             _G["MultiBarBottomLeftButton" .. i .. "HotKey"],
             _G["MultiBarBottomLeftButton" .. i .. "Name"],
+            -- Bottom Right Bar (Bar 3)
             _G["MultiBarBottomRightButton" .. i .. "Count"],
             _G["MultiBarBottomRightButton" .. i .. "HotKey"],
             _G["MultiBarBottomRightButton" .. i .. "Name"],
+            -- Right Bar (Bar 4)
             _G["MultiBarRightButton" .. i .. "Count"],
             _G["MultiBarRightButton" .. i .. "HotKey"],
             _G["MultiBarRightButton" .. i .. "Name"],
+            -- Left Bar (Bar 5)
             _G["MultiBarLeftButton" .. i .. "Count"],
             _G["MultiBarLeftButton" .. i .. "HotKey"],
-            _G["MultiBarLeftButton" .. i .. "Name"]
+            _G["MultiBarLeftButton" .. i .. "Name"],
+            -- Bar 6
+            _G["MultiBar5Button" .. i .. "Count"],
+            _G["MultiBar5Button" .. i .. "HotKey"],
+            _G["MultiBar5Button" .. i .. "Name"],
+            -- Bar 7
+            _G["MultiBar6Button" .. i .. "Count"],
+            _G["MultiBar6Button" .. i .. "HotKey"],
+            _G["MultiBar6Button" .. i .. "Name"],
+            -- Bar 8
+            _G["MultiBar7Button" .. i .. "Count"],
+            _G["MultiBar7Button" .. i .. "HotKey"],
+            _G["MultiBar7Button" .. i .. "Name"],
         }
         
         for _, element in pairs(elements) do
@@ -62,14 +79,14 @@ local patterns = {
 }
 
 local bars = {
-    "ActionButton",
-    "MultiBarBottomLeftButton",
-    "MultiBarBottomRightButton",
-    "MultiBarLeftButton",
-    "MultiBarRightButton",
-    "MultiBar5Button",
-    "MultiBar6Button",
-    "MultiBar7Button",
+    "ActionButton",                -- Main Action Bar (Bar 1)
+    "MultiBarBottomLeftButton",    -- Bottom Left Bar (Bar 2)
+    "MultiBarBottomRightButton",   -- Bottom Right Bar (Bar 3)
+    "MultiBarLeftButton",          -- Left Bar (Bar 5)
+    "MultiBarRightButton",         -- Right Bar (Bar 4)
+    "MultiBar5Button",             -- Bar 6
+    "MultiBar6Button",             -- Bar 7
+    "MultiBar7Button",             -- Bar 8
 }
 
 local function UpdateHotkey(self, actionButtonType)

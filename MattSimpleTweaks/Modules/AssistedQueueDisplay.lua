@@ -208,17 +208,46 @@ local function GetCachedSpellInfo(spellID)
     return spellInfoCache[spellID]
 end
 
+-- Helper function to check if spell is on cooldown
+local function IsSpellOnCooldown(spellID)
+    local cd = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
+    if cd and cd.startTime and cd.duration then
+        return cd.duration > 1.5 and (cd.startTime + cd.duration - GetTime()) > 0.1
+    end
+    return false
+end
+
+-- Helper function to check if spell is usable (has resources, in range, etc.)
+local function IsSpellUsable(spellID)
+    -- First check if we actually know the spell
+    if not IsSpellKnown(spellID) then
+        return false
+    end
+    
+    if C_Spell and C_Spell.IsSpellUsable then
+        return C_Spell.IsSpellUsable(spellID)
+    else
+        -- Fallback for older API
+        local usable, noMana = IsUsableSpell(spellID)
+        return usable or noMana
+    end
+end
+
 -- Get spell queue
 local function GetSpellQueue()
     local queue = {}
     local seen = {}
-    -- Get primary spell
+    local availableSpells = {}  -- Off cooldown spells
+    local onCooldownSpells = {} -- On cooldown spells
+    
+    -- Get primary spell (always show first if present, even if on cooldown)
     local primarySpellID = C_AssistedCombat and C_AssistedCombat.GetNextCastSpell and C_AssistedCombat.GetNextCastSpell()
     if primarySpellID and primarySpellID > 0 then
         queue[#queue + 1] = primarySpellID
         seen[primarySpellID] = true
     end
-    -- Get rotation spells (only if we need more than 1 icon)
+    
+    -- Get rotation spells and separate by cooldown status
     if activeIconCount > 1 then
         local rotationList = C_AssistedCombat and C_AssistedCombat.GetRotationSpells and C_AssistedCombat.GetRotationSpells()
         if rotationList and type(rotationList) == "table" then
@@ -227,15 +256,39 @@ local function GetSpellQueue()
                 if spellID and spellID > 0 and not seen[spellID] then
                     local override = C_Spell and C_Spell.GetOverrideSpell and C_Spell.GetOverrideSpell(spellID) or 0
                     local actualSpellID = (override ~= 0) and override or spellID
-                    if not seen[actualSpellID] then
-                        queue[#queue + 1] = actualSpellID
+                    if not seen[actualSpellID] and IsSpellUsable(actualSpellID) then
+                        if IsSpellOnCooldown(actualSpellID) then
+                            onCooldownSpells[#onCooldownSpells + 1] = actualSpellID
+                        else
+                            availableSpells[#availableSpells + 1] = actualSpellID
+                        end
                         seen[actualSpellID] = true
-                        if #queue >= activeIconCount then break end
                     end
                 end
             end
         end
+        
+        -- Only add available (off cooldown) spells to positions 2, 3, 4
+        for _, spellID in ipairs(availableSpells) do
+            if #queue < activeIconCount then
+                queue[#queue + 1] = spellID
+            else
+                break
+            end
+        end
+        
+        -- Add cooldown spells to positions 2, 3, 4 only if "Hide Cooldown Spells" is disabled
+        if not (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueHideCooldowns) then
+            for _, spellID in ipairs(onCooldownSpells) do
+                if #queue < activeIconCount then
+                    queue[#queue + 1] = spellID
+                else
+                    break
+                end
+            end
+        end
     end
+    
     -- Paladin: Only show one of Wake of Ashes (255937) or Hammer of Light (427453), prefer Hammer if available
     local isPaladin = select(2, UnitClass("player")) == "PALADIN"
     if isPaladin then
@@ -249,22 +302,15 @@ local function GetSpellQueue()
             table.remove(queue, idxWake)
         elseif idxWake or idxHammer then
             -- If only one is present, check if it's actually available (not on cooldown)
-            local function isOnCooldown(spellID)
-                local cd = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
-                if cd and cd.startTime and cd.duration then
-                    return cd.duration > 1.5 and (cd.startTime + cd.duration - GetTime()) > 0.1
-                end
-                return false
-            end
-            if idxHammer and isOnCooldown(427453) and not idxWake then
+            if idxHammer and IsSpellOnCooldown(427453) and not idxWake then
                 -- Hammer is on cooldown, but Wake is not in queue, so try to show Wake if available
-                if not isOnCooldown(255937) then
+                if not IsSpellOnCooldown(255937) then
                     -- Insert Wake at Hammer's position
                     queue[idxHammer] = 255937
                 end
-            elseif idxWake and isOnCooldown(255937) and not idxHammer then
+            elseif idxWake and IsSpellOnCooldown(255937) and not idxHammer then
                 -- Wake is on cooldown, but Hammer is not in queue, so try to show Hammer if available
-                if not isOnCooldown(427453) then
+                if not IsSpellOnCooldown(427453) then
                     queue[idxWake] = 427453
                 end
             end
@@ -375,6 +421,7 @@ local function UpdateDisplay(force)
                 if info and info.iconID then
                     -- Update icon
                     btn.icon:SetTexture(info.iconID)
+                    btn.icon:SetAlpha(1) -- Always full alpha now
                     
                     -- Update keybind
                     btn.keybind:SetText(GetSpellKeybind(spellID) or "")

@@ -40,6 +40,7 @@ MattSimpleTweaksDB_Defaults = {
     enableNameplateTargetArrows = false,
     enableVisualSpellQueue = false,
     enableVisualSpellQueueGCD = true,
+    visualSpellQueueHideCooldowns = false,
     visualSpellQueueIcons = 3,
     visualSpellQueueScale = 1.0,
 }
@@ -480,6 +481,7 @@ local function CreateOptionsPanel()
     local assistedHighlightCheckbox; assistedHighlightCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Assisted Highlight - Glow effect on next recommended spell", "enableAssistedHighlight", y)
     local queueCheckbox; queueCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Visual Spell Queue - Display upcoming recommended spells", "enableVisualSpellQueue", y)
     local gcdCheckbox; gcdCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Show GCD Wheel - Display GCD cooldown on first spell icon", "enableVisualSpellQueueGCD", y)
+    local hideCooldownsCheckbox; hideCooldownsCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Hide Cooldown Spells - Only show off-cooldown spells in positions 2-4", "visualSpellQueueHideCooldowns", y)
 
     -- Icon count dropdown (with proper spacing)
 

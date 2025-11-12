@@ -41,6 +41,7 @@ local totalWidth = CalculateTotalWidth(MAX_ICONS)
 local frame = CreateFrame("Frame", "MST_AssistedQueueDisplay", UIParent)
 frame:SetSize(totalWidth, firstIconSize)
 frame:SetPoint("CENTER", 0, -150)
+
 frame:SetMovable(true)
 frame:SetClampedToScreen(true)
 frame:EnableMouse(true)
@@ -48,6 +49,31 @@ frame:RegisterForDrag("LeftButton")
 frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
 frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 frame:Hide()
+
+
+-- Right-click: open settings directly (no menu)
+local function OpenSettingsOrWarn()
+    if InCombatLockdown() then
+        print("|cff00ff98[MST]|r Cannot open settings while in combat. Please wait until combat ends.")
+        return
+    end
+    if MattSimpleTweaksOptionsFrame then
+        MattSimpleTweaksOptionsFrame:Show()
+    else
+        print("|cff00ff98[MST]|r Settings panel not loaded.")
+    end
+end
+
+
+-- Use OnMouseUp for right-click context menu (RegisterForClicks is only for Button frames)
+local origOnMouseUp = frame:GetScript("OnMouseUp")
+frame:SetScript("OnMouseUp", function(self, button)
+    if button == "RightButton" and IsShiftKeyDown() then
+        OpenSettingsOrWarn()
+    elseif button == "LeftButton" and origOnMouseUp then
+        origOnMouseUp(self, button)
+    end
+end)
 
 -- Add a semi-transparent background so it's easier to grab
 local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -64,8 +90,8 @@ border:SetDrawLayer("BORDER", -1)
 
 -- Create title bar (hidden by default, shown on mouseover)
 local titleBar = CreateFrame("Frame", nil, frame)
-titleBar:SetSize(200, 20)
-titleBar:SetPoint("BOTTOM", frame, "TOP", 0, 2)
+titleBar:SetSize(220, 44)
+titleBar:SetPoint("BOTTOM", frame, "TOP", 0, 0)
 titleBar:EnableMouse(true)
 titleBar:Hide()
 
@@ -77,11 +103,18 @@ local titleBorder = titleBar:CreateTexture(nil, "BORDER")
 titleBorder:SetAllPoints(titleBar)
 titleBorder:SetColorTexture(0.5, 0.5, 0.5, 0.8)
 
-local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetFont(STANDARD_TEXT_FONT, 14, "OUTLINE")
-titleText:SetText("MST Visual Spell Queue")
-titleText:SetTextColor(1, 0.82, 0, 1)
+
+local titleText1 = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+titleText1:SetPoint("CENTER", titleBar, "CENTER", 0, 8)
+titleText1:SetFont(STANDARD_TEXT_FONT, 14, "OUTLINE")
+titleText1:SetText("|cffffa500SHIFT+RIGHT CLICK|r to open")
+titleText1:SetTextColor(1, 0.82, 0, 1)
+
+local titleText2 = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+titleText2:SetPoint("TOP", titleText1, "BOTTOM", 0, -2)
+titleText2:SetFont(STANDARD_TEXT_FONT, 14, "OUTLINE")
+titleText2:SetText("MST settings menu")
+titleText2:SetTextColor(1, 0.82, 0, 1)
 
 -- Show/hide title bar on mouseover
 frame:SetScript("OnEnter", function(self)

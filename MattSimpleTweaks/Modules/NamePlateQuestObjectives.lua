@@ -174,7 +174,7 @@ local function UpdateWorldQuests()
     wipe(ActiveWorldQuests)
     local mapID = C_Map.GetBestMapForUnit('player')
     if mapID then
-        for _, task in pairs(C_TaskQuest.GetQuestsForPlayerByMapID(mapID) or {}) do
+        for _, task in pairs(C_TaskQuest.GetQuestsOnMap(mapID) or {}) do
             if task.inProgress then
                 local questTitle = select(1, C_TaskQuest.GetQuestInfoByQuestID(task.questID))
                 if questTitle then

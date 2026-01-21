@@ -18,7 +18,7 @@ end
 -- Assisted Queue Display (1-3 icons with keybinds and cooldowns)
 local addonName, addonTable = ...
 
-local MAX_ICONS = 4
+local MAX_ICONS = 1
 local ICON_SIZE = 48
 local ICON_SPACING = 4
 local FIRST_ICON_SCALE = 1.4
@@ -462,12 +462,14 @@ local function UpdateDisplay(force)
                     -- Update cooldown (GCD for first icon if enabled, spell CD for others)
                     if i == 1 and MattSimpleTweaksDB and MattSimpleTweaksDB.enableVisualSpellQueueGCD then
                         local gcdInfo = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(61304)
-                        if gcdInfo and gcdInfo.startTime and gcdInfo.duration and gcdInfo.duration > 0 and gcdInfo.duration < 1.5 then
+                        if gcdInfo and gcdInfo.isEnabled then
+                            -- GCD is active, show it
                             btn.cooldown:SetCooldown(gcdInfo.startTime, gcdInfo.duration)
                             btn.cooldown:Show()
                         else
+                            -- No GCD, check spell cooldown
                             local cdInfo = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
-                            if cdInfo and cdInfo.startTime and cdInfo.duration and cdInfo.duration > 1.5 then
+                            if cdInfo and cdInfo.isEnabled then
                                 btn.cooldown:SetCooldown(cdInfo.startTime, cdInfo.duration)
                                 btn.cooldown:Show()
                             else
@@ -477,7 +479,7 @@ local function UpdateDisplay(force)
                         if i == 1 and btn.ShowLibGlow then btn:ShowLibGlow() end
                     else
                         local cdInfo = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
-                        if cdInfo and cdInfo.startTime and cdInfo.duration and cdInfo.duration > 1.5 then
+                        if cdInfo and cdInfo.isEnabled then
                             btn.cooldown:SetCooldown(cdInfo.startTime, cdInfo.duration)
                             btn.cooldown:Show()
                         else

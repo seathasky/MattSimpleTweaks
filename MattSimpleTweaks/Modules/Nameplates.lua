@@ -1,5 +1,4 @@
 local addonName, addonTable = ...
-local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 
 -- Table of interrupt spells by class ID
 local interruptSpells = {
@@ -19,46 +18,21 @@ local interruptSpells = {
 }
 
 function addonTable.modules.nameplates:SetupNameplateCastbarScale()
-    local function GetInterruptColor(unit)
-        -- Basic checks
-        if not unit then return "gray" end
-
-        -- Check cast state
-        local spellName, _, _, _, _, _, _, notInterruptible = UnitCastingInfo(unit)
-        if not spellName then
-            spellName, _, _, _, _, _, _, notInterruptible = UnitChannelInfo(unit)
-        end
-
-        if not spellName then return nil end -- No cast happening
-
-        -- Simple color logic - only yellow or gray
-        if notInterruptible then
-            return "gray" -- Cast is not interruptible
-        else
-            return "yellow" -- Cast IS interruptible
-        end
-    end
-
+    local castBarState = {} -- Track interrupt status per nameplate
+    
     local function ModifyCastBar(castBar, unit)
         if not castBar or not unit then return end
 
         castBar:SetHeight(16)
         castBar:SetWidth(200)
 
-        local color = GetInterruptColor(unit)
-
-        if color == "yellow" then
+        -- Check if we have stored interrupt status for this unit
+        local isInterruptible = castBarState[unit] ~= false
+        
+        if isInterruptible then
             castBar:SetStatusBarColor(1, 0.85, 0)
-            if not castBar.hasPixelGlow then
-                LibCustomGlow.PixelGlow_Start(castBar, {1, 0.85, 0, 1}, 8, 0.25, 8, 2, 2, 2, false)
-                castBar.hasPixelGlow = true
-            end
-        else -- "gray" or nil
+        else -- not interruptible
             castBar:SetStatusBarColor(0.7, 0.7, 0.7)
-            if castBar.hasPixelGlow then
-                LibCustomGlow.PixelGlow_Stop(castBar)
-                castBar.hasPixelGlow = false
-            end
         end
 
         if castBar.Icon then castBar.Icon:SetSize(16, 16) end
@@ -73,33 +47,48 @@ function addonTable.modules.nameplates:SetupNameplateCastbarScale()
         end
     end
 
-    -- Hook the OnHide to cleanup glow
+    -- Hook the OnHide to cleanup
     local function HookCastBar(castBar)
-        if not castBar.glowHooked then
+        if not castBar.castBarHooked then
             castBar:HookScript("OnHide", function(self)
-                if self.hasPixelGlow then
-                    LibCustomGlow.PixelGlow_Stop(self)
-                    self.hasPixelGlow = false
-                end
+                -- Cleanup if needed
             end)
-            castBar.glowHooked = true
+            castBar.castBarHooked = true
         end
     end
 
-    -- Simple event-based approach
+    -- Event-based approach using interrupt status events
     local f = CreateFrame("Frame")
     f:RegisterEvent("UNIT_SPELLCAST_START")
     f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+    f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+    f:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
     f:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 
     f:SetScript("OnEvent", function(self, event, unit)
-        if event == "NAME_PLATE_UNIT_ADDED" then
+        if not unit then return end
+        
+        if event == "UNIT_SPELLCAST_INTERRUPTIBLE" then
+            castBarState[unit] = true
+            local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
+            if nameplate and nameplate.UnitFrame and nameplate.UnitFrame.castBar then
+                ModifyCastBar(nameplate.UnitFrame.castBar, unit)
+            end
+        elseif event == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE" then
+            castBarState[unit] = false
+            local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
+            if nameplate and nameplate.UnitFrame and nameplate.UnitFrame.castBar then
+                ModifyCastBar(nameplate.UnitFrame.castBar, unit)
+            end
+        elseif event == "NAME_PLATE_UNIT_ADDED" then
+            castBarState[unit] = true -- Default to interruptible
             local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
             if nameplate and nameplate.UnitFrame and nameplate.UnitFrame.castBar then
                 HookCastBar(nameplate.UnitFrame.castBar)
                 ModifyCastBar(nameplate.UnitFrame.castBar, unit)
             end
-        elseif unit and unit:match("^nameplate") then
+        elseif event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
+            castBarState[unit] = true -- Default to interruptible on new cast
             local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
             if nameplate and nameplate.UnitFrame and nameplate.UnitFrame.castBar then
                 ModifyCastBar(nameplate.UnitFrame.castBar, unit)

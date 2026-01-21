@@ -25,19 +25,27 @@ local function GetRaidIcon(unitFlags)
 	return "{rt"..RaidIconMaskToIndex[raidTarget].."}";
 end
 
--- Create frame and functions immediately
-local interr = CreateFrame("Frame", "InterruptTrackerFrame", UIParent)
+-- Create frame for event handling
+local interr = CreateFrame("Frame")
+local isEnabled = false
 
 -- Register functions with addon table
 addon.modules.interruptAnnouncer.EnableInterruptAnnouncer = function()
-    if MattSimpleTweaksDB and MattSimpleTweaksDB.enableInterruptAnnouncer then
-        interr:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        interr:RegisterEvent("PLAYER_ENTERING_WORLD")
-        interr:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+    if MattSimpleTweaksDB and MattSimpleTweaksDB.enableInterruptAnnouncer and not isEnabled then
+        isEnabled = true
+        -- Defer registration to a safe time
+        C_Timer.After(0.1, function()
+            if isEnabled then
+                interr:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+                interr:RegisterEvent("PLAYER_ENTERING_WORLD")
+                interr:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+            end
+        end)
     end
 end
 
 addon.modules.interruptAnnouncer.DisableInterruptAnnouncer = function()
+    isEnabled = false
     interr:UnregisterAllEvents()
 end
 

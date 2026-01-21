@@ -96,7 +96,7 @@ local function LoadModules()
     if MattSimpleTweaksDB.enableABGrowth then
         addonTable:SetupABGrowth()
     end
-    if MattSimpleTweaksDB.enableInterruptAnnouncer then
+    if false then -- Interrupt Announcer disabled due to protected function restrictions
         addonTable.modules.interruptAnnouncer.EnableInterruptAnnouncer()
     end
     if MattSimpleTweaksDB.enableNameplateCastbarScale then
@@ -420,7 +420,6 @@ local function CreateOptionsPanel()
                    dbKey == "enableReloadAlias" or dbKey == "enableEditModeAlias" or
                    dbKey == "enableABGrowth" or dbKey == "enableBagItemLevels" or
                    dbKey == "hideRuneFrame" or dbKey == "hideHolyPowerBar" or
-                   dbKey == "enableInterruptAnnouncer" or
                    dbKey == "enableNameplateQuestObjectives" or
                    dbKey == "enableHideMacroText" or
                    dbKey == "enableAssistedHighlight" or
@@ -460,7 +459,6 @@ local function CreateOptionsPanel()
         {text = "Reload UI |cffffd100(/rl)|r - Quick reload command", key = "enableReloadAlias"},
         {text = "Edit Mode |cffffd100(/edit)|r - Quick edit mode command", key = "enableEditModeAlias"},
         {text = "Performance Monitor - Show FPS & MS |cffff0000(Shift+Left Click to move)|r", key = "enablePerformanceMonitor"},
-        {text = "Interrupt Announcer - Auto announce interrupts |cff00ff00[Party]|r |cff00aeff[Raid]|r", key = "enableInterruptAnnouncer"},
     })
 
     AddOptions(contentFrames.ui, {
@@ -485,6 +483,7 @@ local function CreateOptionsPanel()
 
     -- Icon count dropdown (with proper spacing)
 
+
     -- Icon count dropdown (stacked)
     local iconCountLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     iconCountLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
@@ -498,7 +497,7 @@ local function CreateOptionsPanel()
 
     UIDropDownMenu_Initialize(iconCountDropdown, function(self, level)
         local info = UIDropDownMenu_CreateInfo()
-        for i = 1, 4 do
+        for i = 1, 1 do
             info.text = tostring(i)
             info.value = i
             info.func = function()
@@ -512,8 +511,6 @@ local function CreateOptionsPanel()
             UIDropDownMenu_AddButton(info)
         end
     end)
-
-    -- Glow style dropdown (stacked)
     local glowStyleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     glowStyleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
     glowStyleLabel:SetText("Glow Style:")

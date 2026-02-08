@@ -2,48 +2,34 @@ local addonName, addonTable = ...
 local frame = CreateFrame("Frame")
 
 -- Initialize modules table
-addonTable.modules = {
-    deathknight = {},
-    paladin = {},
-    nameplates = {
-        SetupNameplateCastbarScale = function() end
-    },
-    interruptAnnouncer = {
-        EnableInterruptAnnouncer = function() end,
-        DisableInterruptAnnouncer = function() end
-    }
-}
+addonTable.modules = {}
 
 -- Default settings
 MattSimpleTweaksDB_Defaults = {
     enableQuickBind = false,
     enableReloadAlias = false,
     enableEditModeAlias = false,
+    enablePullAlias = false,
     enablePerformanceMonitor = false,
-    enableInterruptAnnouncer = false, 
-    hideHitIndicators = false,
+    enableEditModeDeviceManager = false,
     enableObjectiveFrameScale = false,
     enableStatusBarScale = false,
     enableHideMicroMenu = false,
     enableHideBagBar = false,
     enableActionBarTweaks = false,
+    actionBarFontScale = 1.0,
     enableActionBarMouseover = false,
     enableBagItemLevels = false,
+    enableAutoRepair = false,
+    autoRepairFundingSource = "GUILD",
+    enableAutoSellJunk = false,
     enableABGrowth = false,
-    hideRuneFrame = false,
-    enableNameplateQuestObjectives = false,
-    hideHolyPowerBar = false,
-    enableHideMacroText = false, 
-    enableNameplateCastbarScale = false,
-    nameplateCastbarScale = 0.8,
-    enableAssistedHighlight = false,
-    enableNameplateTargetArrows = false,
-    enableVisualSpellQueue = false,
-    enableVisualSpellQueueGCD = true,
-    visualSpellQueueHideCooldowns = false,
-    visualSpellQueueIcons = 3,
-    visualSpellQueueScale = 1.0,
+    enableHideMacroText = false,
+    enableAutoAcceptQuests = false,
+    enableAutoTurnInQuests = false,
 }
+-- Saved var defaults for minimap launcher
+MattSimpleTweaksDB_Defaults.minimap = {}
 
 local function InitializeDB()
     if not MattSimpleTweaksDB then
@@ -57,11 +43,8 @@ local function InitializeDB()
 end
 
 local function LoadModules()
-    if MattSimpleTweaksDB.enableQuickBind or MattSimpleTweaksDB.enableReloadAlias or MattSimpleTweaksDB.enableEditModeAlias then
+    if MattSimpleTweaksDB.enableQuickBind or MattSimpleTweaksDB.enableReloadAlias or MattSimpleTweaksDB.enableEditModeAlias or MattSimpleTweaksDB.enablePullAlias then
         addonTable:SetupSlashCommands()
-    end
-    if MattSimpleTweaksDB.hideHitIndicators then
-        addonTable:SetupHideHitIndicators()
     end
     if MattSimpleTweaksDB.enableActionBarTweaks then
         addonTable:SetupActionBarTweaks()
@@ -87,31 +70,14 @@ local function LoadModules()
     if MattSimpleTweaksDB.enableBagItemLevels then
         addonTable:EnableBagItemLevels()
     end
-    if MattSimpleTweaksDB.hideRuneFrame then
-        addonTable.modules.deathknight:SetupHideRuneFrame()
-    end
-    if MattSimpleTweaksDB.hideHolyPowerBar then
-        addonTable.modules.paladin:SetupHideHolyPowerBar()
+    if MattSimpleTweaksDB.enableAutoRepair or MattSimpleTweaksDB.enableAutoSellJunk then
+        addonTable:SetupMerchantTweaks()
     end
     if MattSimpleTweaksDB.enableABGrowth then
         addonTable:SetupABGrowth()
     end
-    if false then -- Interrupt Announcer disabled due to protected function restrictions
-        addonTable.modules.interruptAnnouncer.EnableInterruptAnnouncer()
-    end
-    if MattSimpleTweaksDB.enableNameplateCastbarScale then
-        addonTable.modules.nameplates:SetupNameplateCastbarScale()
-    end
-    if MattSimpleTweaksDB.enableNameplateTargetArrows then
-        addonTable.modules.nameplates:SetupNameplateTargetArrows()
-    end
-    if MattSimpleTweaksDB.enableAssistedHighlight then
-        addonTable:SetupAssistedHighlight()
-    end
-    if MattSimpleTweaksDB.enableVisualSpellQueue then
-        if addonTable.ToggleAssistedQueueDisplay then
-            addonTable.ToggleAssistedQueueDisplay(true)
-        end
+    if MattSimpleTweaksDB.enableAutoAcceptQuests or MattSimpleTweaksDB.enableAutoTurnInQuests then
+        addonTable:SetupQuestTweaks()
     end
 end
 
@@ -128,15 +94,23 @@ StaticPopupDialogs["MST_RELOAD_CONFIRM"] = {
     preferredIndex = 3
 }
 
+--GUI height and width
 local function CreateOptionsPanel()
     local optionsFrame = CreateFrame("Frame", "MattSimpleTweaksOptionsFrame", UIParent, "BackdropTemplate")
-    optionsFrame:SetSize(700, 500) -- Increased width from 600 to 700 to accommodate new tab
+    optionsFrame:SetSize(650, 350)
     optionsFrame:SetPoint("CENTER")
     optionsFrame:SetMovable(true)
     optionsFrame:EnableMouse(true)
     optionsFrame:RegisterForDrag("LeftButton")
     optionsFrame:SetScript("OnDragStart", optionsFrame.StartMoving)
     optionsFrame:SetScript("OnDragStop", optionsFrame.StopMovingOrSizing)
+
+    -- Ensure the options window stays above other UI elements
+    optionsFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+    optionsFrame:SetFrameLevel(100)
+    optionsFrame:SetToplevel(true)
+    optionsFrame:SetClampedToScreen(true)
+    optionsFrame:SetScript("OnShow", function(self) self:SetFrameLevel(100) end)
 
     optionsFrame:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -174,6 +148,51 @@ local function CreateOptionsPanel()
     closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
     closeButton:SetScript("OnClick", function() optionsFrame:Hide() end)
 
+    -- Minimap icon hide/show checkbox (left of close button)
+    local hideMinimapChk = CreateFrame("CheckButton", nil, header, "UICheckButtonTemplate")
+    hideMinimapChk:SetSize(24, 24)
+    hideMinimapChk:SetPoint("TOPRIGHT", -28, -2)
+
+    local function UpdateHideMinimapButton()
+        MattSimpleTweaksDB.minimap = MattSimpleTweaksDB.minimap or {}
+        local db = MattSimpleTweaksDB.minimap
+        if db.hide then
+            hideMinimapChk:SetChecked(false)
+        else
+            hideMinimapChk:SetChecked(true)
+        end
+    end
+
+    hideMinimapChk:SetScript("OnClick", function(self)
+        MattSimpleTweaksDB.minimap = MattSimpleTweaksDB.minimap or {}
+        local db = MattSimpleTweaksDB.minimap
+        db.hide = not self:GetChecked()
+        local LDBI = LibStub and LibStub("LibDBIcon-1.0", true)
+        if LDBI then
+            LDBI:Refresh(addonName, db)
+        end
+        UpdateHideMinimapButton()
+    end)
+
+    hideMinimapChk:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Minimap Icon")
+        GameTooltip:Show()
+    end)
+
+    hideMinimapChk:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    -- label for the minimap checkbox
+    local hideMinimapLabel = header:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    hideMinimapLabel:SetPoint("RIGHT", hideMinimapChk, "LEFT", -6, 0)
+    hideMinimapLabel:SetText("Minimap Icon")
+    hideMinimapLabel:SetTextColor(1, 1, 1)
+
+    -- initialize checkbox state
+    UpdateHideMinimapButton()
+
     -- Tab container
     local tabContainer = CreateFrame("Frame", nil, optionsFrame, "BackdropTemplate")
     tabContainer:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 5, -5)
@@ -192,78 +211,34 @@ local function CreateOptionsPanel()
     contentContainer:SetBackdropColor(0.15, 0.15, 0.15, 1)
     contentContainer:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
-    -- Scroll frame
-    local scrollFrame = CreateFrame("ScrollFrame", nil, contentContainer)
+    -- Content area (scrolling disabled)
+    local scrollFrame = CreateFrame("Frame", nil, contentContainer)
     scrollFrame:SetPoint("TOPLEFT", 10, -10)
     scrollFrame:SetPoint("BOTTOMRIGHT", -26, 10)
 
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollFrame:SetScrollChild(scrollChild)
-    scrollChild:SetSize(scrollFrame:GetWidth(), 1000)
-
     -- Content frames
     local contentFrames = {
-        general = CreateFrame("Frame", nil, scrollChild),
-        ui = CreateFrame("Frame", nil, scrollChild),
-        actionbars = CreateFrame("Frame", nil, scrollChild),
-        bags = CreateFrame("Frame", nil, scrollChild),
-        nameplates = CreateFrame("Frame", nil, scrollChild),
-        classes = CreateFrame("Frame", nil, scrollChild),
-        editmode = CreateFrame("Frame", nil, scrollChild)
+        general = CreateFrame("Frame", nil, scrollFrame),
+        ui = CreateFrame("Frame", nil, scrollFrame),
+        actionbars = CreateFrame("Frame", nil, scrollFrame),
+        bags = CreateFrame("Frame", nil, scrollFrame),
+        quests = CreateFrame("Frame", nil, scrollFrame),
+        editmode = CreateFrame("Frame", nil, scrollFrame)
     }
 
     -- Set up each content frame
     for _, frame in pairs(contentFrames) do
-        frame:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
-        frame:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, 0)
-        frame:SetHeight(1000)
+        frame:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 0, 0)
+        frame:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", 0, 0)
+        frame:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", 0, 0)
         frame:Hide()
     end
 
-    -- Scrollbar
-    local slider = CreateFrame("Slider", nil, scrollFrame, "UIPanelScrollBarTemplate")
-    slider:SetPoint("TOPRIGHT", contentContainer, -8, -20)
-    slider:SetPoint("BOTTOMRIGHT", contentContainer, -8, 20)
-    slider:SetMinMaxValues(0, 1)
-    slider:SetValueStep(0.1)
-    slider:SetValue(0)
-    slider:SetWidth(16)
-    slider:SetScript("OnValueChanged", function(self, value)
-        scrollFrame:SetVerticalScroll(value)
-    end)
+    -- Scrolling disabled: no scrollbar or mousewheel handling
 
-    -- Hook scroll frame to update slider
-    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
-        local current = slider:GetValue()
-        local min, max = slider:GetMinMaxValues()
-        local step = 30
-
-        if delta > 0 then
-            slider:SetValue(math.max(min, current - step))
-        else
-            slider:SetValue(math.min(max, current + step))
-        end
-    end)
-
-    -- Function to update scroll range
+    -- Scrolling disabled: UpdateScrollRange is a no-op
     local function UpdateScrollRange()
-        local height = 0
-        for _, frame in pairs(contentFrames) do
-            if frame:IsVisible() then
-                height = frame:GetHeight()
-                break
-            end
-        end
-        
-        local viewHeight = scrollFrame:GetHeight()
-        if height > viewHeight then
-            local difference = height - viewHeight
-            slider:SetMinMaxValues(0, difference)
-            slider:Show()
-        else
-            slider:Hide()
-        end
-        scrollChild:SetHeight(height)
+        -- Intentionally left blank since scrolling is disabled
     end
 
     -- Create tabs
@@ -273,8 +248,7 @@ local function CreateOptionsPanel()
         ["UI"] = "ui",
         ["Action Bars"] = "actionbars",
         ["Bags"] = "bags",
-        ["Nameplates"] = "nameplates",
-        ["Classes"] = "classes",
+        ["Quests"] = "quests",
         ["System"] = "editmode",
     }
 
@@ -317,7 +291,6 @@ local function CreateOptionsPanel()
             tab:SetBackdropColor(0.15, 0.15, 0.15, 1)
             tab:SetBackdropBorderColor(0.565, 0.894, 0.757, 1)
             tab.text:SetTextColor(0.565, 0.894, 0.757)
-            slider:SetValue(0)
             UpdateScrollRange()
         end)
 
@@ -342,9 +315,8 @@ local function CreateOptionsPanel()
     CreateTab(2, "UI")
     CreateTab(3, "Action Bars")
     CreateTab(4, "Bags")
-    CreateTab(5, "Nameplates")
-    CreateTab(6, "Classes")
-    CreateTab(7, "System")
+    CreateTab(5, "Quests")
+    CreateTab(6, "System")
 
     tabs[1]:Click()
 
@@ -364,6 +336,9 @@ local function CreateOptionsPanel()
         labelText:SetPoint("LEFT", cb, "RIGHT", 5, 0)
         labelText:SetText(mainText)
         labelText:SetTextColor(1, 1, 1)
+        if dbKey == "enableAutoTurnInQuests" then
+            labelText:SetFontObject("GameFontHighlight")
+        end
 
         local description = text:match("%-(.+)$")
         if description then
@@ -396,39 +371,20 @@ local function CreateOptionsPanel()
                 else
                     addonTable:DisablePerformanceMonitor()
                 end
-                return
+            end
+            if dbKey == "enableAutoRepair" or dbKey == "enableAutoSellJunk" then
+                addonTable:SetupMerchantTweaks()
+            end
+            if dbKey == "enableAutoAcceptQuests" or dbKey == "enableAutoTurnInQuests" then
+                addonTable:SetupQuestTweaks()
             end
 
             if callback then callback(isChecked) end
 
-            if dbKey == "enableNameplateQuestObjectives" and not isChecked then
-                if C_NamePlate then
-                    for _, namePlate in pairs(C_NamePlate.GetNamePlates()) do
-                        if namePlate and namePlate.UnitFrame and namePlate.UnitFrame.questIcon then
-                            namePlate.UnitFrame.questIcon:Hide()
-                        end
-                    end
-                end
-            end
 
             if wasChecked ~= isChecked then
-                if dbKey == "enableHideMicroMenu" or dbKey == "enableHideBagBar" or
-                   dbKey == "hideHitIndicators" or dbKey == "enableObjectiveFrameScale" or
-                   dbKey == "enablePlayerFrameScale" or dbKey == "enableTargetFrameScale" or
-                   dbKey == "enableStatusBarScale" or dbKey == "enableActionBarMouseover" or
-                   dbKey == "enableActionBarTweaks" or dbKey == "enableQuickBind" or
-                   dbKey == "enableReloadAlias" or dbKey == "enableEditModeAlias" or
-                   dbKey == "enableABGrowth" or dbKey == "enableBagItemLevels" or
-                   dbKey == "hideRuneFrame" or dbKey == "hideHolyPowerBar" or
-                   dbKey == "enableNameplateQuestObjectives" or
-                   dbKey == "enableHideMacroText" or
-                   dbKey == "enableAssistedHighlight" or
-                   dbKey == "enableNameplateTargetArrows" or
-                   dbKey == "enableVisualSpellQueue" or
-                   dbKey == "enableNameplateCastbarScale" then
-                    print(addonName .. ": Change to '" .. text .. "' requires a UI reload (/rl) to apply.")
-                    StaticPopup_Show("MST_RELOAD_CONFIRM")
-                end
+                print(addonName .. ": Change to '" .. text .. "' requires a UI reload (/rl) to apply.")
+                StaticPopup_Show("MST_RELOAD_CONFIRM")
             end
         end)
 
@@ -458,173 +414,132 @@ local function CreateOptionsPanel()
         {text = "Keybind Mode |cffffd100(/kb)|r - Quick keybinding menu", key = "enableQuickBind"},
         {text = "Reload UI |cffffd100(/rl)|r - Quick reload command", key = "enableReloadAlias"},
         {text = "Edit Mode |cffffd100(/edit)|r - Quick edit mode command", key = "enableEditModeAlias"},
+        {text = "Pull Timer |cffffd100(/pull X)|r - Alias for countdown with seconds", key = "enablePullAlias"},
         {text = "Performance Monitor - Show FPS & MS |cffff0000(Shift+Left Click to move)|r", key = "enablePerformanceMonitor"},
     })
 
     AddOptions(contentFrames.ui, {
-        {text = "Hide Combat Text - Remove floating combat text on player/pet frame", key = "hideHitIndicators"},
         {text = "Scale Objective Frame - Reduce objective tracker to |cffffd100(0.7)|r scale", key = "enableObjectiveFrameScale"},
         {text = "Scale Status Bar - Reduce experience/reputation bar to |cffffd100(0.7)|r scale", key = "enableStatusBarScale"},
         {text = "Hide Micro Menu - Hide the game menu buttons", key = "enableHideMicroMenu"},
         {text = "Hide Bag Bar - Hide the bag slot buttons", key = "enableHideBagBar"},
     })
 
-    -- Assisted Combat Section
-    local assistedHeader = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    assistedHeader:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, -10)
-    assistedHeader:SetText("Assisted Combat (EXPERIMENTAL)")
-    assistedHeader:SetTextColor(1, 0.82, 0, 1)
-    
-    local y = -35
-    local assistedHighlightCheckbox; assistedHighlightCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Assisted Highlight - Glow effect on next recommended spell", "enableAssistedHighlight", y)
-    local queueCheckbox; queueCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Visual Spell Queue - Display upcoming recommended spells", "enableVisualSpellQueue", y)
-    local gcdCheckbox; gcdCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Show GCD Wheel - Display GCD cooldown on first spell icon", "enableVisualSpellQueueGCD", y)
-    local hideCooldownsCheckbox; hideCooldownsCheckbox, y = CreateCheckbox(contentFrames.actionbars, "Hide Cooldown Spells - Only show off-cooldown spells in positions 2-4", "visualSpellQueueHideCooldowns", y)
 
-    -- Icon count dropdown (with proper spacing)
+    -- Better Action Bar Text with font scale slider
+    local abTextCheckbox, abTextY = CreateCheckbox(contentFrames.actionbars, "Better Action Bar Text - Improved hotkey text visibility", "enableActionBarTweaks", -10)
 
 
-    -- Icon count dropdown (stacked)
-    local iconCountLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    iconCountLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
-    iconCountLabel:SetText("Number of Icons:")
-    y = y - 35
+    local scaleY = abTextY - 25
 
-    local iconCountDropdown = CreateFrame("Frame", "MST_IconCountDropdown", contentFrames.actionbars, "UIDropDownMenuTemplate")
-    iconCountDropdown:SetPoint("TOPLEFT", iconCountLabel, "TOPRIGHT", -15, 7)
-    UIDropDownMenu_SetWidth(iconCountDropdown, 80)
-    UIDropDownMenu_SetText(iconCountDropdown, MattSimpleTweaksDB.visualSpellQueueIcons or 3)
+    local fontScaleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    fontScaleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 35, scaleY)
+    fontScaleLabel:SetText("Font Scale:")
 
-    UIDropDownMenu_Initialize(iconCountDropdown, function(self, level)
-        local info = UIDropDownMenu_CreateInfo()
-        for i = 1, 1 do
-            info.text = tostring(i)
-            info.value = i
-            info.func = function()
-                MattSimpleTweaksDB.visualSpellQueueIcons = i
-                UIDropDownMenu_SetText(iconCountDropdown, i)
-                if addonTable.UpdateAssistedQueueIconCount then
-                    addonTable.UpdateAssistedQueueIconCount(i)
-                end
-            end
-            info.checked = (MattSimpleTweaksDB.visualSpellQueueIcons == i)
-            UIDropDownMenu_AddButton(info)
+    local fontScaleSlider = CreateFrame("Slider", "MST_ABFontScaleSlider", contentFrames.actionbars, "OptionsSliderTemplate")
+    fontScaleSlider:SetPoint("LEFT", fontScaleLabel, "RIGHT", 10, 0)
+    fontScaleSlider:SetMinMaxValues(0.5, 2.0)
+    fontScaleSlider:SetValue(MattSimpleTweaksDB.actionBarFontScale or 1.0)
+    fontScaleSlider:SetValueStep(0.1)
+    fontScaleSlider:SetObeyStepOnDrag(true)
+    fontScaleSlider:SetWidth(150)
+    _G[fontScaleSlider:GetName() .. "Low"]:SetText("0.5")
+    _G[fontScaleSlider:GetName() .. "High"]:SetText("2.0")
+    _G[fontScaleSlider:GetName() .. "Text"]:SetText(string.format("%.1f", MattSimpleTweaksDB.actionBarFontScale or 1.0))
+
+    fontScaleSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value * 10 + 0.5) / 10
+        MattSimpleTweaksDB.actionBarFontScale = value
+        _G[self:GetName() .. "Text"]:SetText(string.format("%.1f", value))
+        if addonTable.UpdateActionBarFontScale then
+            addonTable.UpdateActionBarFontScale(value)
         end
     end)
-    local glowStyleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    glowStyleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
-    glowStyleLabel:SetText("Glow Style:")
-    y = y - 35
-
-    local glowStyleDropdown = CreateFrame("Frame", "MST_GlowStyleDropdown", contentFrames.actionbars, "UIDropDownMenuTemplate")
-    glowStyleDropdown:SetPoint("TOPLEFT", glowStyleLabel, "TOPRIGHT", -15, 7)
-    UIDropDownMenu_SetWidth(glowStyleDropdown, 120)
-    local function getCurrentGlowStyle()
-        return (MattSimpleTweaksDB and MattSimpleTweaksDB.visualSpellQueueGlowStyle) or "star"
-    end
-    local function setGlowStyle(style)
-        local currentStyle = getCurrentGlowStyle()
-        if currentStyle ~= style then
-            MattSimpleTweaksDB.visualSpellQueueGlowStyle = style
-            UIDropDownMenu_SetText(glowStyleDropdown, style == "star" and "Star" or "Pixel Flash")
-            if addonTable.UpdateAssistedQueueGlowStyle then
-                addonTable.UpdateAssistedQueueGlowStyle(style)
-            end
-            print(addonName .. ": Glow style changed. Reload UI (/rl) for changes to fully apply.")
-            StaticPopup_Show("MST_RELOAD_CONFIRM")
-        end
-    end
-    UIDropDownMenu_SetText(glowStyleDropdown, getCurrentGlowStyle() == "star" and "Star" or "Pixel Flash")
-    UIDropDownMenu_Initialize(glowStyleDropdown, function(self, level)
-        local info = UIDropDownMenu_CreateInfo()
-        info.text = "Star"
-        info.value = "star"
-        info.func = function()
-            setGlowStyle("star")
-        end
-        info.checked = (getCurrentGlowStyle() == "star")
-        UIDropDownMenu_AddButton(info)
-
-        info = UIDropDownMenu_CreateInfo()
-        info.text = "Pixel Flash"
-        info.value = "pixel"
-        info.func = function()
-            setGlowStyle("pixel")
-        end
-        info.checked = (getCurrentGlowStyle() == "pixel")
-        UIDropDownMenu_AddButton(info)
-    end)
-
-    -- Scale slider (stacked)
-    local scaleLabel = contentFrames.actionbars:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    scaleLabel:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
-    scaleLabel:SetText("Display Scale:")
-    y = y - 35
-
-    local scaleSlider = CreateFrame("Slider", "MST_QueueScaleSlider", contentFrames.actionbars, "OptionsSliderTemplate")
-    scaleSlider:SetPoint("TOPLEFT", scaleLabel, "TOPRIGHT", 10, -5)
-    scaleSlider:SetMinMaxValues(0.5, 2.0)
-    scaleSlider:SetValue(MattSimpleTweaksDB.visualSpellQueueScale or 1.0)
-    scaleSlider:SetValueStep(0.05)
-    scaleSlider:SetObeyStepOnDrag(true)
-    scaleSlider:SetWidth(200)
-    _G[scaleSlider:GetName() .. "Low"]:SetText("0.5")
-    _G[scaleSlider:GetName() .. "High"]:SetText("2.0")
-    _G[scaleSlider:GetName() .. "Text"]:SetText(string.format("%.2f", MattSimpleTweaksDB.visualSpellQueueScale or 1.0))
-
-    scaleSlider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value * 20 + 0.5) / 20
-        MattSimpleTweaksDB.visualSpellQueueScale = value
-        _G[self:GetName() .. "Text"]:SetText(string.format("%.2f", value))
-        if addonTable.UpdateAssistedQueueScale then
-            addonTable.UpdateAssistedQueueScale(value)
-        end
-    end)
-
-    -- Separator line after Assisted Combat section (stacked)
-    local assistedSeparator = contentFrames.actionbars:CreateTexture(nil, "ARTWORK")
-    assistedSeparator:SetPoint("TOPLEFT", contentFrames.actionbars, "TOPLEFT", 10, y - 10)
-    assistedSeparator:SetSize(520, 1)
-    assistedSeparator:SetColorTexture(0.3, 0.3, 0.3, 1)
-    y = y - 20
 
     AddOptions(contentFrames.actionbars, {
-        {text = "Better Action Bar Text - Improved hotkey text visibility", key = "enableActionBarTweaks"},
         {text = "Mouseover Fade - Hide action bars 4 & 5 until mouseover", key = "enableActionBarMouseover"},
         {text = "Hide Macro Text - Hide macro text on all action buttons", key = "enableHideMacroText"},
         {text = "Reverse Bar Growth - Action Bar 1 expands upward", key = "enableABGrowth"},
-    }, y)
+    }, scaleY - 45)
 
-    -- Nameplates
-    local questCheckbox, questDescY = CreateCheckbox(contentFrames.nameplates, "Quest Progress - Display completion numbers on nameplate targets", "enableNameplateQuestObjectives", -10)
-    
-    local questDesc = contentFrames.nameplates:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    questDesc:SetPoint("TOPLEFT", contentFrames.nameplates, "TOPLEFT", 20, questDescY - 5)
-    questDesc:SetWidth(380)
-    questDesc:SetJustifyH("LEFT")
-    questDesc:SetText("Requires UI refresh when changing between larger/smaller nameplates in WoW settings")
-    questDesc:SetTextColor(0.5, 0.5, 0.5)
-
-    AddOptions(contentFrames.nameplates, {
-        {text = "THICC Enemy Castbars - Increase enemy castbar size to |cffffd100(16px)|r height", key = "enableNameplateCastbarScale"},
-        {text = "Target Arrows - Show > < on targeted nameplates", key = "enableNameplateTargetArrows"},
-    }, questDescY - 35)
-
-    AddOptions(contentFrames.bags, {
+    local bagsY = AddOptions(contentFrames.bags, {
         {text = "Show Item Levels - Display gear iLvl |cffff0000(Combined Backpack Only)|r", key = "enableBagItemLevels"},
+        {text = "Auto Repair - Repair all gear when opening a vendor", key = "enableAutoRepair"},
     })
 
-    -- System (Edit Mode Device Manager)
+    local fundingHeader = contentFrames.bags:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    fundingHeader:SetPoint("TOPLEFT", contentFrames.bags, "TOPLEFT", 35, bagsY)
+    fundingHeader:SetText("Auto Repair Funding:")
+    fundingHeader:SetTextColor(0.9, 0.9, 0.9)
+
+    local guildFundingCB = CreateFrame("CheckButton", addonName .. "AutoRepairGuildFunding", contentFrames.bags)
+    guildFundingCB:SetSize(20, 20)
+    guildFundingCB:SetPoint("TOPLEFT", contentFrames.bags, "TOPLEFT", 35, bagsY - 25)
+    guildFundingCB:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
+    guildFundingCB:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
+    guildFundingCB:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+    guildFundingCB:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+
+    local guildFundingText = guildFundingCB:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    guildFundingText:SetPoint("LEFT", guildFundingCB, "RIGHT", 5, 0)
+    guildFundingText:SetText("Guild Money")
+    guildFundingText:SetTextColor(1, 1, 1)
+    guildFundingText:EnableMouse(true)
+    guildFundingText:SetScript("OnMouseDown", function() guildFundingCB:Click() end)
+
+    local playerFundingCB = CreateFrame("CheckButton", addonName .. "AutoRepairPlayerFunding", contentFrames.bags)
+    playerFundingCB:SetSize(20, 20)
+    playerFundingCB:SetPoint("TOPLEFT", contentFrames.bags, "TOPLEFT", 35, bagsY - 50)
+    playerFundingCB:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
+    playerFundingCB:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
+    playerFundingCB:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+    playerFundingCB:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+
+    local playerFundingText = playerFundingCB:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    playerFundingText:SetPoint("LEFT", playerFundingCB, "RIGHT", 5, 0)
+    playerFundingText:SetText("Own Money")
+    playerFundingText:SetTextColor(1, 1, 1)
+    playerFundingText:EnableMouse(true)
+    playerFundingText:SetScript("OnMouseDown", function() playerFundingCB:Click() end)
+
+    local function RefreshRepairFundingChecks()
+        local source = MattSimpleTweaksDB.autoRepairFundingSource or "GUILD"
+        guildFundingCB:SetChecked(source == "GUILD")
+        playerFundingCB:SetChecked(source == "PLAYER")
+    end
+
+    guildFundingCB:SetScript("OnClick", function()
+        MattSimpleTweaksDB.autoRepairFundingSource = "GUILD"
+        RefreshRepairFundingChecks()
+    end)
+
+    playerFundingCB:SetScript("OnClick", function()
+        MattSimpleTweaksDB.autoRepairFundingSource = "PLAYER"
+        RefreshRepairFundingChecks()
+    end)
+
+    RefreshRepairFundingChecks()
+
+    CreateCheckbox(contentFrames.bags, "Auto Sell Junk - Sell poor quality items at vendor", "enableAutoSellJunk", bagsY - 85)
+
+    AddOptions(contentFrames.quests, {
+        {text = "Auto Accept Quests - Automatically accept quest offers from NPCs", key = "enableAutoAcceptQuests"},
+        {text = "Auto Turn In Quests - Automatically complete/turn-in finished quests", key = "enableAutoTurnInQuests"},
+    })
+
+    -- System (Edit Mode Device Manager) 
+    local edmCheckbox, edmCheckboxY = CreateCheckbox(contentFrames.editmode, "Enable Edit Mode Device Manager - Auto-apply Edit Mode layout on login", "enableEditModeDeviceManager", -10)
+    
     local edmDesc = contentFrames.editmode:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    edmDesc:SetPoint("TOP", contentFrames.editmode, "TOP", 0, -10)
+    edmDesc:SetPoint("TOPLEFT", contentFrames.editmode, "TOPLEFT", 20, edmCheckboxY - 5)
     edmDesc:SetWidth(400)
-    edmDesc:SetJustifyH("CENTER")
-    edmDesc:SetText("Edit Mode Device Manager automatically sets your preferred Edit Mode WoW layout for each device you play on")
-    edmDesc:SetTextColor(1, 1, 1)
+    edmDesc:SetJustifyH("LEFT")
+    edmDesc:SetText("Automatically sets your preferred Edit Mode WoW layout for each device you play on")
+    edmDesc:SetTextColor(0.5, 0.5, 0.5)
 
     local edmButton = CreateFrame("Button", nil, contentFrames.editmode, "UIPanelButtonTemplate")
     edmButton:SetSize(200, 25)
-    edmButton:SetPoint("TOP", edmDesc, "BOTTOM", 0, -10)
+    edmButton:SetPoint("TOPLEFT", edmDesc, "BOTTOMLEFT", 0, -10)
     edmButton:GetFontString():SetTextColor(1, 1, 1)
     edmButton:SetText("Edit Mode Device Manager")
     edmButton.Left:SetVertexColor(0.565, 0.894, 0.757)
@@ -639,66 +554,23 @@ local function CreateOptionsPanel()
             print(addonName .. ": Edit Mode Device Manager is not loaded.")
         end
     end)
-
-    -- Classes
-    local classY = -10
-    local CLASS_COLORS = {
-        ["DEATHKNIGHT"] = {0.77, 0.12, 0.23},
-        ["DEMONHUNTER"] = {0.64, 0.19, 0.79},
-        ["DRUID"] = {1.00, 0.49, 0.04},
-        ["EVOKER"] = {0.20, 0.58, 0.50},
-        ["HUNTER"] = {0.67, 0.83, 0.45},
-        ["MAGE"] = {0.25, 0.78, 0.92},
-        ["MONK"] = {0.00, 1.00, 0.59},
-        ["PALADIN"] = {0.96, 0.55, 0.73},
-        ["PRIEST"] = {1.00, 1.00, 1.00},
-        ["ROGUE"] = {1.00, 0.96, 0.41},
-        ["SHAMAN"] = {0.00, 0.44, 0.87},
-        ["WARLOCK"] = {0.53, 0.53, 0.93},
-        ["WARRIOR"] = {0.78, 0.61, 0.43}
-    }
-
-    local function CreateClassPlaceholder(parent, y)
-        local text = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        text:SetPoint("TOPLEFT", 40, y)
-        text:SetText("None")
-        text:SetTextColor(0.5, 0.5, 0.5)
-        return text, y - 25
-    end
-
-    local _, newY = CreateSectionHeader(contentFrames.classes, "Deathknight", CLASS_COLORS["DEATHKNIGHT"], classY)
-    AddOptions(contentFrames.classes, {
-        {text = "Hide Rune Frame", key = "hideRuneFrame"},
-    }, newY)
-
-    local function CreateClassHeader(class, y)
-        local displayText = class:sub(1,1) .. class:sub(2):lower()
-        local _, newY = CreateSectionHeader(contentFrames.classes, displayText, CLASS_COLORS[class], y)
-        
-        if class == "PALADIN" then
-            local yPos = AddOptions(contentFrames.classes, {
-                {text = "Hide Holy Power Bar", key = "hideHolyPowerBar"},
-            }, newY)
-            return _, yPos
+    
+    -- Show/hide button based on checkbox state
+    local function UpdateEDMButtonVisibility()
+        if MattSimpleTweaksDB.enableEditModeDeviceManager then
+            edmButton:Show()
+            edmDesc:Show()
+        else
+            edmButton:Hide()
+            edmDesc:Hide()
         end
-        
-        local _, yPos = CreateClassPlaceholder(contentFrames.classes, newY)
-        return _, yPos
     end
-
-    local currentY = newY - 30
-    _, currentY = CreateClassHeader("DEMONHUNTER", currentY)
-    _, currentY = CreateClassHeader("DRUID", currentY - 10)
-    _, currentY = CreateClassHeader("EVOKER", currentY - 10)
-    _, currentY = CreateClassHeader("HUNTER", currentY - 10)
-    _, currentY = CreateClassHeader("MAGE", currentY - 10)
-    _, currentY = CreateClassHeader("MONK", currentY - 10)
-    _, currentY = CreateClassHeader("PALADIN", currentY - 10)
-    _, currentY = CreateClassHeader("PRIEST", currentY - 10)
-    _, currentY = CreateClassHeader("ROGUE", currentY - 10)
-    _, currentY = CreateClassHeader("SHAMAN", currentY - 10)
-    _, currentY = CreateClassHeader("WARLOCK", currentY - 10)
-    _, currentY = CreateClassHeader("WARRIOR", currentY - 10)
+    UpdateEDMButtonVisibility()
+    
+    -- Hook the checkbox to update button visibility
+    edmCheckbox:HookScript("OnClick", function()
+        UpdateEDMButtonVisibility()
+    end)
 
     SLASH_MATTSIMPLETWEAKS1 = '/mst'
     SlashCmdList["MATTSIMPLETWEAKS"] = function()
@@ -721,6 +593,83 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         LoadModules()
         print("|cffff0000" .. addonName .. " loaded. Type /mst for options.|r")
         frame:UnregisterEvent("ADDON_LOADED")
+    end
+end)
+
+-- Create a LibDBIcon minimap launcher and a Blizzard Interface Options entry
+local function SetupLauncher()
+    if not MattSimpleTweaksDB then return end
+    MattSimpleTweaksDB.minimap = MattSimpleTweaksDB.minimap or {}
+
+    local LDBI = LibStub and LibStub("LibDBIcon-1.0", true)
+    local iconPath = "Interface\\AddOns\\MattSimpleTweaks\\Media\\Icons\\ST.png"
+
+    local iconData = {
+        icon = iconPath,
+        OnClick = function(self, button)
+            if button == "LeftButton" then
+                if MattSimpleTweaksOptionsFrame and MattSimpleTweaksOptionsFrame:IsShown() then
+                    MattSimpleTweaksOptionsFrame:Hide()
+                else
+                    MattSimpleTweaksOptionsFrame:Show()
+                end
+            elseif button == "RightButton" then
+                if InterfaceOptionsFrame_OpenToCategory then
+                    InterfaceOptionsFrame_OpenToCategory(MattSimpleTweaksInterfaceOptions)
+                end
+            end
+        end,
+        OnTooltipShow = function(tt)
+            tt:AddLine("Matt's Simple Tweaks")
+            tt:AddLine("Left-click: Toggle settings", 1, 1, 1)
+        end,
+    }
+
+    if LDBI then
+        LDBI:Register(addonName, iconData, MattSimpleTweaksDB.minimap)
+    end
+
+    -- Create a Blizzard Interface Options category that opens our settings
+    if not _G.MattSimpleTweaksInterfaceOptions then
+        local panel = CreateFrame("Frame", "MattSimpleTweaksInterfaceOptions", UIParent)
+        panel.name = "MattSimpleTweaks"
+        panel.okay = function() end
+        panel.refresh = function()
+            if MattSimpleTweaksOptionsFrame and MattSimpleTweaksOptionsFrame:IsShown() then
+                MattSimpleTweaksOptionsFrame:Hide()
+            end
+            MattSimpleTweaksOptionsFrame:Show()
+        end
+
+        -- add a small icon to the top-left of the panel
+        local tex = panel:CreateTexture(nil, "ARTWORK")
+        tex:SetSize(32, 32)
+        tex:SetPoint("TOPLEFT", 16, -16)
+        tex:SetTexture(iconPath)
+
+        if InterfaceOptions_AddCategory then
+            InterfaceOptions_AddCategory(panel)
+        else
+            -- Blizzard Interface Options may not be loaded yet; wait for it
+            frame:RegisterEvent("ADDON_LOADED")
+            frame:HookScript("OnEvent", function(self, event, arg1)
+                if event == "ADDON_LOADED" and arg1 == "Blizzard_InterfaceOptions" then
+                    if InterfaceOptions_AddCategory then
+                        InterfaceOptions_AddCategory(panel)
+                    end
+                    frame:UnregisterEvent("ADDON_LOADED")
+                end
+            end)
+        end
+    end
+end
+
+-- Ensure launcher is setup after variables and UI are created
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:HookScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_LOGIN" then
+        SetupLauncher()
+        frame:UnregisterEvent("PLAYER_LOGIN")
     end
 end)
 

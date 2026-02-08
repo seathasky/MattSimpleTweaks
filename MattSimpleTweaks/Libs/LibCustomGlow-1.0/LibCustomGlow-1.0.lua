@@ -929,7 +929,7 @@ end
 function lib.ProcGlow_Stop(r, key)
     key = key or ""
     local f = r["_ProcGlow" .. key]
-    if f then
+    if f and ProcGlowPool:IsActive(f) then
         ProcGlowPool:Release(f)
     end
 end

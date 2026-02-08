@@ -3,8 +3,5 @@
 	<!--@non-debug@-->
 	<Include file="Libs\TaintLess\TaintLess.xml"/>
 	<!--@end-non-debug@-->
-	
-	<!-- Module files -->
-	<Script file="Modules\AssistedHighlight.lua"/>
 
 </Ui>

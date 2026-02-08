@@ -4,7 +4,10 @@ local function CreateDeviceManagerFrame()
     local frame = CreateFrame("Frame", "EditModeDeviceManagerFrameOptions", UIParent, "BackdropTemplate")
     frame:SetSize(500, 250)
     frame:SetPoint("CENTER")
-    frame:SetFrameStrata("DIALOG")
+    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    frame:SetFrameLevel(100)
+    frame:SetToplevel(true)
+    frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -65,6 +68,7 @@ local function CreateDeviceManagerFrame()
     -- but use white text (1, 1, 1) for all text elements
 
     frame:Hide()
+    frame:SetScript("OnShow", function(self) self:SetFrameLevel(100) end)
     return frame
 end
 

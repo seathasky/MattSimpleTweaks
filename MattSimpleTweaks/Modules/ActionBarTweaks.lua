@@ -2,9 +2,10 @@ local addonName, addonTable = ...
 
 local NAOWH_FONT = "Interface\\AddOns\\MattSimpleTweaks\\Media\\Fonts\\Naowh.ttf"
 
-local function ScaleActionBars()
-    local keybindScale = 2
-    local macroScale = 1.3
+local function ScaleActionBars(fontScale)
+    fontScale = fontScale or (MattSimpleTweaksDB and MattSimpleTweaksDB.actionBarFontScale) or 1.0
+    local keybindScale = 2 * fontScale
+    local macroScale = 1.3 * fontScale
     for i=1,12 do
         local elements = {
             -- Main Action Bar (Bar 1)
@@ -112,6 +113,11 @@ local function UpdateMacroText(button)
             button.Name:Show()
         end
     end
+end
+
+-- Function to update font scale dynamically
+function addonTable.UpdateActionBarFontScale(scale)
+    ScaleActionBars(scale)
 end
 
 -- Define the setup function expected by the core file

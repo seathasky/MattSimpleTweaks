@@ -13,6 +13,7 @@ function addonTable:SetupSlashCommands()
     UnregisterSlashCommand("QUICKBIND")
     UnregisterSlashCommand("RELOADUI")
     UnregisterSlashCommand("EDITMODE")
+    UnregisterSlashCommand("PULLCOUNTDOWN")
 
     if MattSimpleTweaksDB.enableQuickBind then
         SLASH_QUICKBIND1 = '/kb'
@@ -36,6 +37,28 @@ function addonTable:SetupSlashCommands()
         SlashCmdList["EDITMODE"] = function()
             if EditModeManagerFrame then
                 EditModeManagerFrame:Show()
+            end
+        end
+    end
+
+    if MattSimpleTweaksDB.enablePullAlias then
+        SLASH_PULLCOUNTDOWN1 = '/pull'
+        SlashCmdList["PULLCOUNTDOWN"] = function(msg)
+            local seconds = tonumber((msg or ""):match("^(%d+)"))
+            if not seconds then
+                seconds = 10
+            end
+
+            seconds = math.floor(seconds)
+            if seconds < 1 or seconds > 60 then
+                print(addonName .. ": /pull value must be between 1 and 60.")
+                return
+            end
+
+            if C_PartyInfo and C_PartyInfo.DoCountdown then
+                C_PartyInfo.DoCountdown(seconds)
+            else
+                print(addonName .. ": Countdown API not available.")
             end
         end
     end

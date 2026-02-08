@@ -3,6 +3,24 @@ local addonName, addonTable = ...
 local db -- Reference to saved variables
 local perfFrame = nil -- Will be created when needed
 
+-- Save the current position to the database
+local function SavePosition()
+    if perfFrame and db then
+        local point, relativeTo, relativePoint, xOfs, yOfs = perfFrame:GetPoint()
+        local relativeToName = "UIParent"
+        if relativeTo and relativeTo.GetName and relativeTo:GetName() then
+            relativeToName = relativeTo:GetName()
+        end
+        db.perfMonitorPos = { 
+            point = point, 
+            relativeTo = relativeToName, 
+            relativePoint = relativePoint, 
+            xOfs = xOfs, 
+            yOfs = yOfs 
+        }
+    end
+end
+
 local function CreatePerformanceFrame()
     if perfFrame then return perfFrame end
     
@@ -11,7 +29,9 @@ local function CreatePerformanceFrame()
     perfFrame:SetClampedToScreen(true)
     perfFrame:SetMovable(true)
     perfFrame:EnableMouse(true)
-    perfFrame:SetFrameStrata("MEDIUM")
+    perfFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+    perfFrame:SetFrameLevel(100)
+    perfFrame:SetToplevel(true)
 
     perfFrame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -51,12 +71,19 @@ local function CreatePerformanceFrame()
         if button == "LeftButton" and self.isMoving then 
             self:StopMovingOrSizing()
             self.isMoving = false
-            local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
-            if relativeTo and relativeTo:GetName() then
-                db.perfMonitorPos = { point = point, relativeTo = relativeTo:GetName(), relativePoint = relativePoint, xOfs = xOfs, yOfs = yOfs }
-            end
+            SavePosition()
         end
     end)
+
+    -- Register for logout to save position
+    perfFrame:RegisterEvent("PLAYER_LOGOUT")
+    perfFrame:SetScript("OnEvent", function(self, event)
+        if event == "PLAYER_LOGOUT" then
+            SavePosition()
+        end
+    end)
+
+    perfFrame:SetScript("OnShow", function(self) self:SetFrameLevel(100) end)
 
     return perfFrame
 end
@@ -80,8 +107,11 @@ end
 
 function addonTable:DisablePerformanceMonitor()
     if perfFrame then
+        -- Save position before disabling
+        SavePosition()
         perfFrame:Hide()
         perfFrame:SetScript("OnUpdate", nil)
+        perfFrame:UnregisterAllEvents()
         perfFrame:SetParent(nil)
         _G.MST_PerformanceFrame = nil
         perfFrame = nil

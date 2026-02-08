@@ -1,13 +1,12 @@
 MattSimpleTweaksDB_Defaults = {
-    -- General - These three are true by default
+    -- General
     enableQuickBind = true,
     enableReloadAlias = true,
     enableEditModeAlias = true,
+    enablePullAlias = true,
     enablePerformanceMonitor = false,
-    enableInterruptAnnouncer = false,
 
     -- UI
-    hideHitIndicators = false,
     enableObjectiveFrameScale = false,
     enableStatusBarScale = false,
     enableHideMicroMenu = false,
@@ -20,13 +19,13 @@ MattSimpleTweaksDB_Defaults = {
 
     -- Bags
     enableBagItemLevels = false,
+    enableAutoRepair = false,
+    autoRepairFundingSource = "GUILD",
+    enableAutoSellJunk = false,
 
-    -- Nameplates
-    enableNameplateQuestObjectives = false,
-
-    -- Classes
-    hideRuneFrame = false,
-    hideHolyPowerBar = false,
+    -- Quests
+    enableAutoAcceptQuests = false,
+    enableAutoTurnInQuests = false,
 
     -- Edit Mode
     enableEditModeDeviceManager = false,
